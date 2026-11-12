@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * /dymarket estate unlist &lt;id&gt; (Turkish: kaldir). A leased listing ends its lease and the tenant gets the
+ * /dymarket estate unlist &lt;id&gt; (Turkish: kaldır). A leased listing ends its lease and the tenant gets the
  * unused time back from the owner (as much as the owner has). The permission is checked by /dymarket.
  */
 final class EstateAdminCommand implements AdminSubcommand {

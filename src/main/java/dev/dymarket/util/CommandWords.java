@@ -8,9 +8,9 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * English sub-command words and their Turkish forms. Only sub-command positions are translated; player names,
- * amounts and ids stay untouched. Matching ignores case (Locale.ROOT) and Turkish letters, so "satınal",
- * "SATINAL" and "satinal" are all "buy".
+ * English sub-command words and their Turkish forms. Sub-command words are shown with real Turkish letters
+ * ("satınal", "kaldır"); they are accepted with or without those letters and in any case, so "satınal", "SATINAL"
+ * and "satinal" are all "buy". Only sub-command positions are translated; player names, amounts and ids stay untouched.
  */
 public final class CommandWords {
     private static final Map<String, String> TR = new LinkedHashMap<>();
@@ -20,16 +20,15 @@ public final class CommandWords {
     static {
         String[][] pairs = {
                 {"help", "yardım"}, {"reload", "yenile"}, {"language", "dil"}, {"give", "ver"}, {"take", "al"},
-                {"set", "ayarla"}, {"log", "kayit"}, {"rollback", "gerial"}, {"merge", "birlestir"}, {"import", "aktar"},
-                {"sell", "sat"}, {"rent", "kirala"}, {"unlist", "kaldir"}, {"list", "liste"}, {"info", "bilgi"},
-                {"buy", "satinal"}, {"collect", "topla"}, {"cancel", "iptal"}, {"search", "ara"}, {"mine", "benim"},
-                {"send", "gonder"}, {"exchange", "cevir"}, {"autorenew", "otoyenile"}, {"leave", "ayril"},
+                {"set", "ayarla"}, {"log", "kayıt"}, {"rollback", "gerial"}, {"merge", "birleştir"}, {"import", "aktar"},
+                {"sell", "sat"}, {"rent", "kirala"}, {"unlist", "kaldır"}, {"list", "liste"}, {"info", "bilgi"},
+                {"buy", "satınal"}, {"collect", "topla"}, {"cancel", "iptal"}, {"search", "ara"}, {"mine", "benim"},
+                {"send", "gönder"}, {"exchange", "çevir"}, {"autorenew", "otoyenile"}, {"leave", "ayrıl"},
                 {"evict", "tahliye"}, {"remove", "sil"}, {"purge", "temizle"}, {"lease", "tut"},
-                {"confirm", "onayla"}, {"force", "zorla"}, {"auto", "oto"}, {"here", "burasi"}};
+                {"confirm", "onayla"}, {"force", "zorla"}, {"auto", "oto"}, {"here", "burası"}};
         for (String[] pair : pairs) TR.put(pair[0], pair[1]);
         EXTRA.put("lang", "language");
         EXTRA.put("otomatik", "auto");
-        EXTRA.put("yardim", "help");
         EXTRA.put("logs", "log");
         EXTRA.put("history", "log");
         EXTRA.put("gecmis", "log");

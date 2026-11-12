@@ -28,7 +28,7 @@ DyMarket combines a multi-currency economy with a Vault provider, a transaction 
 
 **One JAR for every server.** Bukkit, Spigot, Paper, Purpur and Folia. On Folia, items are taken and delivered on each player's own thread, and all disk work runs on one background thread, never on the main or a region thread.
 
-**Five languages.** English, Turkish, German, Spanish and Russian, picked from the player's Minecraft language or their own choice. Turkish players also get Turkish commands such as `/para`, `/pazar` and `/emlak`, and Turkish sub-command words. Messages accept `&` colour codes everywhere and MiniMessage tags on Paper, Purpur and Folia; names and text typed by players are never read as tags.
+**Five languages.** English, Turkish, German, Spanish and Russian, picked from the player's Minecraft language or their own choice. Turkish players also get Turkish command and sub-command words. Messages accept `&` colour codes everywhere and MiniMessage tags on Paper, Purpur and Folia; names and text typed by players are never read as tags.
 
 Planned for later releases: Bedrock forms, bidding auctions and buy orders, MySQL and cross-server support. Until Bedrock forms arrive, Bedrock players use the command path, which covers every GUI action.
 
@@ -46,49 +46,49 @@ Java 17 bytecode; use the Java runtime your server needs. Release listing: Minec
 
 ## Commands
 
-| Command | Turkish | Purpose |
-|---|---|---|
-| `/balance [player] [currency]` | `/para`, `/bakiye` | Show your balance, or another player's |
-| `/pay <player> <amount> [currency] [confirm]` | `/ode`, `/gonder` | Send money to a player |
-| `/baltop [currency] [page]` | `/paratop`, `/zenginler` | Top balances |
-| `/credits` | `/kredi` | Show your credits |
-| `/credits send <player> <amount>` | `/kredi gonder` | Send credits to a player |
-| `/credits exchange <amount>` | `/kredi cevir` | Exchange credits for money |
-| `/ah` | `/pazar`, `/muzayede` | Open the auction house |
-| `/ah sell <price> [currency] [amount]` | `/pazar sat` | List the item in your main hand |
-| `/ah list [page]` | `/pazar liste` | Browse the active listings |
-| `/ah search <text>` | `/pazar ara` | Search the listings |
-| `/ah info <id>` | `/pazar bilgi` | Show one listing |
-| `/ah buy <id> [confirm]` | `/pazar satinal <id> [onayla]` | Buy a listing |
-| `/ah mine` | `/pazar benim` | Your listings; cancel from here |
-| `/ah cancel <id>` | `/pazar iptal` | Cancel one of your listings |
-| `/ah collect` | `/pazar topla` | Open your collection box |
-| `/estate sell <price> [currency] [here]` | `/emlak sat <price> [currency] [burasi]` | Put the connected claims you stand in up for sale |
-| `/estate rent <price> <days> [currency] [here]` | `/emlak kirala <price> <days> [currency] [burasi]` | Offer them for rent, priced per period of `<days>` |
-| `/estate unlist [id]` | `/emlak kaldir` | Take your listing down |
-| `/estate list [page]` | `/emlak liste` | Browse estate listings |
-| `/estate info [id]` | `/emlak bilgi` | Show a listing, or the one you stand in |
-| `/estate buy [id] [confirm]` | `/emlak satinal [id] [onayla]` | Buy a sale listing |
-| `/estate lease [id] [confirm]` | `/emlak tut [id] [onayla]` | Rent a rent listing |
-| `/estate autorenew [id]` | `/emlak otoyenile` | Turn automatic renewal of your lease on or off |
-| `/estate leave [id] [confirm]` | `/emlak ayril [id] [onayla]` | End your lease now, without a refund |
-| `/estate evict [id]` | `/emlak tahliye` | End your tenant's lease when the paid period ends |
-| `/estate mine` | `/emlak benim` | Your listings and leases |
-| `/dymarket help` | `/dymarket yardim` | Show the commands you may use |
-| `/dymarket language <auto/en/tr/de/es/ru>` | `/dymarket dil <oto/en/tr/de/es/ru>` | Save your language; from the console, set the server language |
-| `/dymarket give <player> <amount> [currency] [txid]` | `/dymarket ver` | Add to a balance; with a `txid`, at most once |
-| `/dymarket take <player> <amount> [currency]` | `/dymarket al` | Take from a balance |
-| `/dymarket set <player> <amount> [currency]` | `/dymarket ayarla` | Set a balance |
-| `/dymarket log <player> [page]` | `/dymarket kayit` | Show a player's transactions |
-| `/dymarket rollback <id> [force]` | `/dymarket gerial <id> [zorla]` | Reverse a transaction |
-| `/dymarket merge <from> <to>` | `/dymarket birlestir` | Merge two accounts |
-| `/dymarket import <essentials/vault>` | `/dymarket aktar` | Copy balances from EssentialsX or the current Vault economy |
-| `/dymarket ah remove <id>` | `/dymarket ah sil` | Remove any auction listing |
-| `/dymarket ah purge <player>` | `/dymarket ah temizle` | Remove every auction listing of a player |
-| `/dymarket estate unlist <id>` | `/dymarket estate kaldir` | Take down any estate listing |
-| `/dymarket reload` | `/dymarket yenile` | Validate and reload settings and messages |
+| Command | Purpose |
+|---|---|
+| `/balance [player] [currency]` | Show your balance, or another player's |
+| `/pay <player> <amount> [currency] [confirm]` | Send money to a player |
+| `/baltop [currency] [page]` | Top balances |
+| `/credits` | Show your credits |
+| `/credits send <player> <amount>` | Send credits to a player |
+| `/credits exchange <amount>` | Exchange credits for money |
+| `/ah` | Open the auction house |
+| `/ah sell <price> [currency] [amount]` | List the item in your main hand |
+| `/ah list [page]` | Browse the active listings |
+| `/ah search <text>` | Search the listings |
+| `/ah info <id>` | Show one listing |
+| `/ah buy <id> [confirm]` | Buy a listing |
+| `/ah mine` | Your listings; cancel from here |
+| `/ah cancel <id>` | Cancel one of your listings |
+| `/ah collect` | Open your collection box |
+| `/estate sell <price> [currency] [here]` | Put the connected claims you stand in up for sale |
+| `/estate rent <price> <days> [currency] [here]` | Offer them for rent, priced per period of `<days>` |
+| `/estate unlist [id]` | Take your listing down |
+| `/estate list [page]` | Browse estate listings |
+| `/estate info [id]` | Show a listing, or the one you stand in |
+| `/estate buy [id] [confirm]` | Buy a sale listing |
+| `/estate lease [id] [confirm]` | Rent a rent listing |
+| `/estate autorenew [id]` | Turn automatic renewal of your lease on or off |
+| `/estate leave [id] [confirm]` | End your lease now, without a refund |
+| `/estate evict [id]` | End your tenant's lease when the paid period ends |
+| `/estate mine` | Your listings and leases |
+| `/dymarket help` | Show the commands you may use |
+| `/dymarket language <auto/en/tr/de/es/ru>` | Save your language; from the console, set the server language |
+| `/dymarket give <player> <amount> [currency] [txid]` | Add to a balance; with a `txid`, at most once |
+| `/dymarket take <player> <amount> [currency]` | Take from a balance |
+| `/dymarket set <player> <amount> [currency]` | Set a balance |
+| `/dymarket log <player> [page]` | Show a player's transactions |
+| `/dymarket rollback <id> [force]` | Reverse a transaction |
+| `/dymarket merge <from> <to>` | Merge two accounts |
+| `/dymarket import <essentials/vault>` | Copy balances from EssentialsX or the current Vault economy |
+| `/dymarket ah remove <id>` | Remove any auction listing |
+| `/dymarket ah purge <player>` | Remove every auction listing of a player |
+| `/dymarket estate unlist <id>` | Take down any estate listing |
+| `/dymarket reload` | Validate and reload settings and messages |
 
-`/bal` and `/money` also open `/balance`, `/balancetop` is `/baltop`, `/credit` is `/credits`, `/auction` and `/auctionhouse` are `/ah`, `/realestate` is `/estate`, and `/dym` and `/dyma` are short for `/dymarket`; `/dymarket` alone shows the help, and `/dymarket auction` is the same as `/dymarket ah`. Turkish sub-command words work in every command, whatever the player's language, with or without Turkish letters (`yardım` and `yardim` are the same). Amounts accept `1k` and `2.5m`, and the currency's number format, such as `1,250.50` under `en-US` or `1.250,50` under `tr-TR`.
+`/bal` and `/money` also open `/balance`, `/balancetop` is `/baltop`, `/credit` is `/credits`, `/auction` and `/auctionhouse` are `/ah`, `/realestate` is `/estate`, and `/dym` and `/dyma` are short for `/dymarket`; `/dymarket` alone shows the help, and `/dymarket auction` is the same as `/dymarket ah`. Amounts accept `1k` and `2.5m`, and the currency's number format, such as `1,250.50` under `en-US` or `1.250,50` under `tr-TR`.
 
 - `/pay` asks for `confirm` at or above `pay.confirm-above`, and `/ah buy` asks for it when `auction.confirm-purchase` is on. `/estate buy`, `/estate lease` and `/estate leave` always ask first. Each prints the exact command to repeat with `confirm`; in the GUIs a confirmation window does the same.
 - `/estate sell` and `/estate rent` take `here` to list only the chunk you stand in. Without an `id`, `/estate unlist`, `info`, `buy` and `lease` use the listing you stand in; `autorenew`, `leave` and `evict` use the lease you stand in, or your only lease.

@@ -1,5 +1,3 @@
-<p align="center"><img src="https://raw.githubusercontent.com/DyPlugin/DyMarket/main/docs/images/logo.png" alt="DyMarket logo" width="128"></p>
-
 # DyMarket — Economy, Auctions and Estate Made Simple
 
 **Keep every coin accounted for. Trade items in one auction house. Rent and sell your land.**
