@@ -1,0 +1,109 @@
+name: DyMarket
+version: ${version}
+main: dev.dymarket.DyMarket
+api-version: '1.20'
+folia-supported: true
+description: Multi-currency economy, web-credit bridge, auction house and DyClaim estate rent and sale in one light plugin, with English, Turkish, German, Spanish and Russian messages.
+author: Claww
+website: https://github.com/DyPlugin/DyMarket
+softdepend: [Vault, DyClaim, DyDiscord, PlaceholderAPI]
+# Register the Vault economy before the family plugins that charge prices read it.
+loadbefore: [DyHomes, DyRTP]
+
+commands:
+  balance:
+    description: Show a balance
+    usage: /<command> [player] [currency]
+    aliases: [bal, money, para, bakiye]
+  pay:
+    description: Transfer money to a player
+    usage: /<command> <player> <amount> [currency]
+    aliases: [ode, gonder]
+  baltop:
+    description: Show the top balances
+    usage: /<command> [currency] [page]
+    aliases: [balancetop, paratop, zenginler]
+  credits:
+    description: Show, send or exchange credits
+    usage: /<command> [send <player> <amount>|exchange <amount>]
+    aliases: [credit, kredi]
+  ah:
+    description: Open the auction house
+    usage: /<command> [sell|list|mine|collect|cancel|buy|search|info]
+    aliases: [auction, auctionhouse, pazar, muzayede]
+  estate:
+    description: Sell or rent your claims, or buy and rent others' claims
+    usage: /<command> [sell|rent|unlist|list|info|buy|lease|autorenew|leave|evict|mine]
+    aliases: [realestate, emlak]
+  dymarket:
+    description: DyMarket help, reload, language and economy administration
+    usage: /<command> [help|reload|language|give|take|set|log|rollback|merge|import|ah|estate]
+    aliases: [dym, dyma]
+
+permissions:
+  dymarket.balance:
+    description: Show your own balance with /balance.
+    default: true
+  dymarket.balance.others:
+    description: Show other players' balances with /balance <player>.
+    default: op
+  dymarket.pay:
+    description: Send money to other players with /pay.
+    default: true
+  dymarket.baltop:
+    description: Show the top balances with /baltop.
+    default: true
+  dymarket.baltop.hidden:
+    description: Hide this player from /baltop.
+    default: false
+  dymarket.credits:
+    description: Show your credits with /credits.
+    default: true
+  dymarket.credits.send:
+    description: Send credits to other players with /credits send.
+    default: true
+  dymarket.credits.exchange:
+    description: Exchange credits for money with /credits exchange.
+    default: true
+  dymarket.ah:
+    description: Open the auction house and buy items.
+    default: true
+  dymarket.ah.sell:
+    description: List items in the auction house.
+    default: true
+  dymarket.estate:
+    description: Browse, buy and rent estate listings.
+    default: true
+  dymarket.estate.sell:
+    description: List your own claims for sale.
+    default: true
+  dymarket.estate.rent:
+    description: List your own claims for rent.
+    default: true
+  dymarket.admin:
+    description: Reload, set the server language and see the admin help lines.
+    default: op
+  dymarket.admin.economy:
+    description: Give, take, set, view logs, roll back, merge accounts and import balances.
+    default: op
+  dymarket.admin.ah:
+    description: Remove and purge auction listings.
+    default: op
+  dymarket.admin.estate:
+    description: Remove estate listings.
+    default: op
+  dymarket.admin.alerts:
+    description: Receive suspicious-transfer alerts and update notices.
+    default: op
+  dymarket.ah.limit.unlimited:
+    description: No limit on active auction listings. dymarket.ah.limit.<n> sets a limit (the highest wins).
+    default: op
+  dymarket.estate.limit.unlimited:
+    description: No limit on active estate listings. dymarket.estate.limit.<n> sets a limit (the highest wins).
+    default: op
+  dymarket.bypass.ratelimit:
+    description: No rate limit on /pay and auction purchases.
+    default: op
+  dymarket.bypass.tax:
+    description: No auction or estate tax. dymarket.ah.tax.<percent> sets a lower tax (the lowest wins).
+    default: false
