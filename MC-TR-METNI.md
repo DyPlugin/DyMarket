@@ -170,7 +170,7 @@ Eksik ayar ve mesajlar açılışta eklenir, sizin değiştirdiklerinize dokunul
 - **Hangar:** [DyMarket](https://hangar.papermc.io/Claww/DyMarket)
 - **CurseForge:** [DyMarket](https://www.curseforge.com/minecraft/bukkit-plugins/dymarket)
 - **GitHub:** [Kaynak kodu, sürümler ve hata bildirimleri](https://github.com/DyPlugin/DyMarket)
-- **Discord:** [DyHub](https://discord.gg/dyhub)
+- **Discord:** [DyHub](https://discord.gg/pC9hrR6TAq)
 
 DyMarket ücretsiz kullanılabilir. Kaynak kodu, **DyMarket Source-Available License 1.0** koşullarıyla incelenebilir. Kullanım ve dağıtım koşulları için depodaki lisans metnine bakabilirsiniz.
 
