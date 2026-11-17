@@ -19,7 +19,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.IntConsumer;
@@ -147,7 +146,7 @@ public final class EstateService {
                               String currency, long price, int days, boolean here, int limit, int taxBasisPoints) {
     }
 
-    private static final String ID_CHARS = "abcdefghijkmnpqrstuvwxyz23456789";
+    private final java.util.concurrent.atomic.AtomicLong lastId = new java.util.concurrent.atomic.AtomicLong();
 
     private final Storage storage;
     private final Bank bank;
@@ -1045,14 +1044,14 @@ public final class EstateService {
         return name == null ? id.toString().substring(0, 8) : name;
     }
 
+    /** Continues numbering after the highest stored id (start-up). */
+    public void seedIds(long last) {
+        lastId.accumulateAndGet(last, Math::max);
+    }
+
+    /** The next listing number, short and easy to read, type and say. */
     private String newId() {
-        ThreadLocalRandom random = ThreadLocalRandom.current();
-        while (true) {
-            char[] id = new char[6];
-            for (int i = 0; i < id.length; i++) id[i] = ID_CHARS.charAt(random.nextInt(ID_CHARS.length()));
-            String text = new String(id);
-            if (!listings.containsKey(text) && !leases.containsKey(text)) return text;
-        }
+        return Long.toString(lastId.incrementAndGet());
     }
 
     /** Open listings and leases, for tests and the API. */

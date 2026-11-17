@@ -14,7 +14,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.LongSupplier;
@@ -64,6 +63,9 @@ public final class AuctionService {
 
         /** In one database transaction: ACTIVE to {@code to}, and the item into {@code owner}'s collection box. */
         boolean transitionToCollect(String id, ListingStatus to, UUID owner, String reason, long timestamp) throws Exception;
+
+        /** Sets a new price only while the listing is still active; false when it is not. */
+        boolean updatePrice(String id, long price) throws Exception;
 
         long addCollect(UUID owner, byte[] item, String reason, long timestamp) throws Exception;
 
@@ -138,7 +140,7 @@ public final class AuctionService {
                               Supplier<byte[]> take) {
     }
 
-    private static final String ID_CHARS = "abcdefghijkmnpqrstuvwxyz23456789";
+    private final java.util.concurrent.atomic.AtomicLong lastId = new java.util.concurrent.atomic.AtomicLong();
 
     private final Storage storage;
     private final Bank bank;
@@ -455,6 +457,56 @@ public final class AuctionService {
                 ? Result.OK : Result.STORAGE_ERROR, listing)));
     }
 
+    /**
+     * Staff price change of an active listing. The seller is told; the tax rate fixed at listing time applies to
+     * the new price. A failed write puts the old price back.
+     */
+    public void changePrice(String id, long price, Consumer<Outcome> done) {
+        Listing listing = get(id);
+        if (listing == null) {
+            done.accept(Outcome.of(Result.NOT_FOUND));
+            return;
+        }
+        Currency currency = currencies.get().get(listing.currency());
+        if (currency == null) {
+            done.accept(Outcome.of(Result.UNKNOWN_CURRENCY, listing));
+            return;
+        }
+        if (price <= 0) {
+            done.accept(Outcome.of(Result.PRICE_TOO_LOW, listing));
+            return;
+        }
+        long old;
+        synchronized (listing) {
+            if (listing.status() != ListingStatus.ACTIVE) {
+                done.accept(Outcome.of(Result.NOT_AVAILABLE, listing));
+                return;
+            }
+            old = listing.price();
+            listing.changePrice(price);
+        }
+        platform.io(() -> {
+            boolean stored;
+            try {
+                stored = storage.updatePrice(listing.id(), price);
+            } catch (Exception failure) {
+                logger.log(Level.WARNING, "Could not change the price of auction listing " + listing.id(), failure);
+                stored = false;
+            }
+            if (!stored) {
+                synchronized (listing) {
+                    if (listing.price() == price) listing.changePrice(old);
+                }
+                done.accept(Outcome.of(Result.STORAGE_ERROR, listing));
+                return;
+            }
+            Map<String, String> values = values(listing, currency);
+            values.put("{old}", CurrencyFormat.format(currency, old));
+            platform.notify(listing.seller(), "auction.price-changed-notice", values, true);
+            done.accept(Outcome.of(Result.OK, listing));
+        });
+    }
+
     /** Admin removal of every active listing of a seller; {@code count} in the outcome says how many. */
     public void purge(UUID seller, Consumer<Outcome> done) {
         List<Listing> flipped = new ArrayList<>();
@@ -636,13 +688,13 @@ public final class AuctionService {
         return listing.amount() > 1 ? listing.itemName() + " x" + listing.amount() : listing.itemName();
     }
 
+    /** Continues numbering after the highest stored id (start-up). */
+    public void seedIds(long last) {
+        lastId.accumulateAndGet(last, Math::max);
+    }
+
+    /** The next listing number, short and easy to read, type and say. */
     private String newId() {
-        ThreadLocalRandom random = ThreadLocalRandom.current();
-        while (true) {
-            char[] id = new char[6];
-            for (int i = 0; i < id.length; i++) id[i] = ID_CHARS.charAt(random.nextInt(ID_CHARS.length()));
-            String text = new String(id);
-            if (!listings.containsKey(text)) return text;
-        }
+        return Long.toString(lastId.incrementAndGet());
     }
 }

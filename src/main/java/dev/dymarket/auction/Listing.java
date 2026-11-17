@@ -13,7 +13,8 @@ public final class Listing {
     private volatile String sellerName;
     private final byte[] item;
     private final int amount;
-    private final long price;
+    /** Changed only by staff (/dyma ah price), while the listing is active and its monitor is held. */
+    private volatile long price;
     private final String currency;
     private final long created;
     private final long expires;
@@ -52,6 +53,9 @@ public final class Listing {
     public int amount() { return amount; }
     /** Price in minor units of {@link #currency()}. */
     public long price() { return price; }
+
+    /** Staff price change; the caller holds this listing's monitor and has checked it is still active. */
+    void changePrice(long price) { this.price = price; }
     public String currency() { return currency; }
     public long created() { return created; }
     public long expires() { return expires; }

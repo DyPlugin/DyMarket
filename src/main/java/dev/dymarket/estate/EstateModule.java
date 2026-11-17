@@ -83,6 +83,7 @@ public final class EstateModule implements EstateService.Platform {
         try {
             plugin.io().call(() -> {
                 store.prepare();
+                service.seedIds(store.maxId());
                 service.load(store.loadListings(), store.loadLeases());
                 return null;
             });

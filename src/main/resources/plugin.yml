@@ -36,11 +36,38 @@ commands:
     usage: /<command> [sell|rent|unlist|list|info|buy|lease|autorenew|leave|evict|mine]
     aliases: [realestate, emlak]
   dymarket:
-    description: DyMarket help, reload, language and economy administration
-    usage: /<command> [help|reload|language|give|take|set|log|rollback|merge|import|ah|estate]
-    aliases: [dym, dyma]
+    description: DyMarket help and your language; /dymarket admin for staff
+    usage: /<command> [help|language|admin]
+    aliases: [dym, market]
+  dyma:
+    description: Shortcut for /dymarket admin
+    usage: /<command> [help|give|take|set|reset|log|rollback|merge|import|ah|estate|language|reload]
+    permission: dymarket.admin
+  economy:
+    description: Staff economy commands
+    usage: /<command> [help|give|take|set|reset|log|rollback|merge|import]
+    aliases: [eco, ekonomi]
+    permission: dymarket.admin.economy
 
 permissions:
+  dymarket.player:
+    description: Every player permission (balance, pay, baltop, credits, auction house, estate).
+    default: true
+    children:
+      dymarket.balance: true
+      dymarket.pay: true
+      dymarket.baltop: true
+      dymarket.credits: true
+      dymarket.credits.send: true
+      dymarket.credits.exchange: true
+      dymarket.ah: true
+      dymarket.ah.sell: true
+      dymarket.estate: true
+      dymarket.estate.sell: true
+      dymarket.estate.rent: true
+  dymarket.bypass.cooldown:
+    description: No waiting time between payments, sales and purchases (cooldowns in config.yml).
+    default: op
   dymarket.balance:
     description: Show your own balance with /balance.
     default: true
@@ -81,7 +108,7 @@ permissions:
     description: List your own claims for rent.
     default: true
   dymarket.admin:
-    description: Reload, set the server language and see the admin help lines.
+    description: Use /dyma, reload, and set the language for everyone.
     default: op
   dymarket.admin.economy:
     description: Give, take, set, view logs, roll back, merge accounts and import balances.

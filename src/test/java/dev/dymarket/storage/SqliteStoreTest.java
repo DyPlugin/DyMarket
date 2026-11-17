@@ -120,6 +120,19 @@ class SqliteStoreTest {
         assertTrue(store.player(alice).name().contains("merged into Bob"));
     }
 
+    @Test void numberedIdsContinueAfterTheHighestAndIgnoreOldRandomIds() throws Exception {
+        open();
+        try (java.sql.Statement statement = store.connection().createStatement()) {
+            // Old random ids: six characters without 0 or 1 (listings), twelve hex characters (transactions).
+            for (String id : List.of("ab2c3d", "987654", "7", "12", "10000"))
+                statement.execute("INSERT INTO auction_listings(id, seller, status) VALUES('" + id + "', 's', 'SOLD')");
+            for (String id : List.of("123456789012", "a1b2c3d4e5f6", "41", "9"))
+                statement.execute("INSERT INTO transactions(id, ts, kind, currency, amount) VALUES('" + id + "', 0, 'GIVE', 'money', 1)");
+        }
+        assertEquals(10000, SqliteStore.maxNumericId(store.connection(), "auction_listings", "length(id) <> 6 OR id GLOB '*[01]*'"));
+        assertEquals(41, store.maxTransactionId());
+    }
+
     @Test void backupsKeepTheNewestSeven() throws Exception {
         File database = new File(folder, "data.db");
         Files.writeString(database.toPath(), "x");

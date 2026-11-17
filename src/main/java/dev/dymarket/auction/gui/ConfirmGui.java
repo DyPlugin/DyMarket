@@ -54,10 +54,12 @@ public final class ConfirmGui extends AuctionWindow {
 
     /** Buys through the service (state check, payment and delivery happen there) and tells the player. */
     public static void buy(AuctionModule module, Player player, Listing listing) {
+        if (Commands.waiting(module.plugin(), player, "ah-buy")) return;
         boolean bypass = player.hasPermission("dymarket.bypass.ratelimit");
         module.service().buy(listing.id(), player.getUniqueId(), player.getName(), bypass, outcome -> {
             if (outcome.result() == AuctionService.Result.OK) {
                 Map<String, String> values = module.service().values(listing, module.plugin().currencies().get(listing.currency()));
+                Commands.used(module.plugin(), player, "ah-buy");
                 Commands.reply(module.plugin(), player, "auction.bought", values);
             } else {
                 module.failure(player, outcome, Commands.values("{id}", listing.id()));

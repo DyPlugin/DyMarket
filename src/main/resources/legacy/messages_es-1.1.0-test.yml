@@ -1,0 +1,14 @@
+# Window titles of the unreleased 1.1.0 test build; unedited ones are upgraded.
+auction:
+  admin-usage: "{prefix} &cUso: &e/dyma ah remove <id> &7| &e/dyma ah purge <jugador>"
+auction-gui:
+  title: "&8Casa de subastas &8({page}/{pages})"
+  title-search: "&8Búsqueda: {text}"
+  title-confirm: "&8¿Comprar este objeto?"
+  title-mine: "&8Tus objetos en venta &8({page}/{pages})"
+  title-collect: "&8Buzón &8({count})"
+estate-gui:
+  title: "&8Mercado inmobiliario &8({page}/{pages})"
+  title-mine: "&8Tus inmuebles &8({page}/{pages})"
+  title-confirm-buy: "&8¿Comprar estos terrenos?"
+  title-confirm-lease: "&8¿Alquilar estos terrenos?"

@@ -6,6 +6,7 @@ import dev.dymarket.command.Commands;
 import dev.dymarket.economy.Currency;
 import dev.dymarket.util.CommandWords;
 import org.bukkit.Material;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
 
@@ -17,7 +18,7 @@ import java.util.Map;
 
 /**
  * The auction house window: listings on every row but the last, then previous page, sort, my listings,
- * collection box (with its count), a search hint and next page. A click on a listing buys it, through
+ * search (typed in chat), a short guide, my listings, the collection box and next page. A click on a listing buys it, through
  * {@link ConfirmGui} when {@code auction.confirm-purchase} is on.
  */
 public final class AuctionGui extends AuctionWindow {
@@ -93,19 +94,29 @@ public final class AuctionGui extends AuctionWindow {
         for (int i = 0; i < base && from + i < shown.size(); i++) {
             Listing listing = shown.get(from + i);
             boolean own = listing.seller().equals(viewer.getUniqueId());
-            inventory.setItem(i, listingItem(listing, own ? "auction-gui.item-lore-own" : "auction-gui.item-lore"));
+            ItemStack item = listingItem(listing, own ? "auction-gui.item-lore-own" : "auction-gui.item-lore");
+            if (staff()) item = decorate(item, null, lines("auction-gui.admin-lore", Map.of()), true);
+            inventory.setItem(i, item);
             slots.put(i, listing);
         }
-        if (shown.isEmpty()) inventory.setItem((base / 9 / 2) * 9 + 4, button(Material.PAPER, "auction-gui.empty", null, Map.of()));
-        if (current > 0) inventory.setItem(base, button(Material.ARROW, "auction-gui.previous", null, Map.of()));
-        inventory.setItem(base + 2, button(Material.COMPARATOR, "auction-gui.sort", "auction-gui.sort-lore",
+        if (shown.isEmpty()) inventory.setItem((base / 9 / 2) * 9 + 4,
+                button(Material.PAPER, search == null ? "auction-gui.empty" : "auction-gui.search-empty", search == null ? "auction-gui.empty-lore" : null,
+                        Commands.values("{text}", search == null ? "" : search)));
+        if (current > 0) inventory.setItem(base, button(Material.ARROW, "auction-gui.previous", "auction-gui.page-lore",
+                Commands.values("{page}", String.valueOf(current), "{pages}", String.valueOf(pages))));
+        inventory.setItem(base + 2, button(Material.HOPPER, "auction-gui.sort", "auction-gui.sort-lore",
                 Commands.values("{sort}", text("auction-gui.sort-" + sort, Map.of()))));
-        inventory.setItem(base + 3, button(Material.CHEST, "auction-gui.mine", "auction-gui.mine-lore",
+        inventory.setItem(base + 3, search == null
+                ? button(Material.OAK_SIGN, "auction-gui.search", "auction-gui.search-lore", Map.of())
+                : button(Material.NAME_TAG, "auction-gui.search-active", "auction-gui.search-active-lore", Commands.values("{text}", search)));
+        inventory.setItem(base + 4, button(Material.BOOK, "auction-gui.guide", "auction-gui.guide-lore",
+                Commands.values("{count}", String.valueOf(shown.size()))));
+        inventory.setItem(base + 5, button(Material.CHEST, "auction-gui.mine", "auction-gui.mine-lore",
                 Commands.values("{count}", String.valueOf(module.service().bySeller(viewer.getUniqueId()).size()))));
-        inventory.setItem(base + 4, button(Material.ENDER_CHEST, "auction-gui.collect", "auction-gui.collect-lore",
+        inventory.setItem(base + 6, button(Material.ENDER_CHEST, "auction-gui.collect", "auction-gui.collect-lore",
                 Commands.values("{count}", String.valueOf(collectCount))));
-        inventory.setItem(base + 5, button(Material.OAK_SIGN, "auction-gui.search", "auction-gui.search-lore", Map.of()));
-        if (current + 1 < pages) inventory.setItem(base + 8, button(Material.ARROW, "auction-gui.next", null, Map.of()));
+        if (current + 1 < pages) inventory.setItem(base + 8, button(Material.ARROW, "auction-gui.next", "auction-gui.page-lore",
+                Commands.values("{page}", String.valueOf(current + 2), "{pages}", String.valueOf(pages))));
         fillBottom(base);
     }
 
@@ -114,7 +125,14 @@ public final class AuctionGui extends AuctionWindow {
         int current = Math.min(page, pages - 1);
         if (slot < base) {
             Listing listing = slots.get(slot);
-            if (listing == null || listing.seller().equals(viewer.getUniqueId()) || !claim()) return;
+            if (listing == null) return;
+            if (staff() && (type == ClickType.SHIFT_RIGHT || type == ClickType.SHIFT_LEFT)) {
+                if (!claim()) return;
+                if (type == ClickType.SHIFT_RIGHT) module.staffRemove(viewer, listing.id(), () -> later(() -> open(module, viewer, current, sort, search)));
+                else later(() -> askPrice(listing, current));
+                return;
+            }
+            if (listing.seller().equals(viewer.getUniqueId()) || !claim()) return;
             if (module.service().settings().confirmPurchase()) later(() -> new ConfirmGui(module, viewer, listing, current, sort, search).show());
             else later(() -> {
                 viewer.closeInventory();
@@ -126,14 +144,51 @@ public final class AuctionGui extends AuctionWindow {
         switch (button) {
             case 0 -> { if (current > 0 && claim()) later(() -> open(module, viewer, current - 1, sort, search)); }
             case 2 -> { if (claim()) later(() -> open(module, viewer, 0, SORTS.get((SORTS.indexOf(sort) + 1) % SORTS.size()), search)); }
-            case 3 -> { if (claim()) later(() -> new MyListingsGui(module, viewer, 0).show()); }
-            case 4 -> { if (claim()) CollectGui.open(module, viewer, 0); }
-            case 5 -> later(() -> {
-                viewer.closeInventory();
-                module.plugin().messages().send(viewer, "auction.search-hint");
-            });
+            case 3 -> {
+                if (!claim()) return;
+                if (search != null && type.isRightClick()) later(() -> open(module, viewer, 0, sort, null));
+                else later(this::askSearch);
+            }
+            case 5 -> { if (claim()) later(() -> new MyListingsGui(module, viewer, 0).show()); }
+            case 6 -> { if (claim()) CollectGui.open(module, viewer, 0); }
             case 8 -> { if (current + 1 < pages && claim()) later(() -> open(module, viewer, current + 1, sort, search)); }
             default -> { }
         }
+    }
+
+    /** Staff with dymarket.admin.ah can remove listings and change prices from the window. */
+    private boolean staff() {
+        return viewer.hasPermission("dymarket.admin.ah");
+    }
+
+    /** Staff price change: closes the window and takes the next chat line as the new price. */
+    private void askPrice(Listing listing, int current) {
+        viewer.closeInventory();
+        module.plugin().messages().send(viewer, "auction.admin-price-prompt", Commands.values("{id}", listing.id(),
+                "{item}", dev.dymarket.auction.AuctionService.label(listing)));
+        String keptSort = sort, keptSearch = search;
+        module.plugin().prompts().ask(viewer, 60, text -> {
+            if (text.isEmpty() || CommandWords.is(text, "cancel")) {
+                module.plugin().messages().send(viewer, "auction.admin-price-cancelled");
+                open(module, viewer, current, keptSort, keptSearch);
+                return;
+            }
+            module.staffPrice(viewer, listing.id(), text, () -> later(() -> open(module, viewer, current, keptSort, keptSearch)));
+        });
+    }
+
+    /** Closes the window and takes the next chat line as the search; "cancel" goes back without one. */
+    private void askSearch() {
+        viewer.closeInventory();
+        module.plugin().messages().send(viewer, "auction.search-prompt");
+        String keptSort = sort;
+        module.plugin().prompts().ask(viewer, 60, text -> {
+            if (text.isEmpty() || CommandWords.is(text, "cancel")) {
+                module.plugin().messages().send(viewer, "auction.search-cancelled");
+                open(module, viewer, 0, keptSort, null);
+                return;
+            }
+            open(module, viewer, 0, keptSort, text);
+        });
     }
 }

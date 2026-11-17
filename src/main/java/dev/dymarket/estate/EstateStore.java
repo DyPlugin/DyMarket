@@ -63,6 +63,16 @@ public final class EstateStore implements EstateService.Storage {
 
     @Override
     public List<EstateListing> loadListings() throws SQLException {
+        return loadOpenListings();
+    }
+
+    /** The highest numbered listing or lease id (they share one numbering); older ids were six random characters. */
+    public long maxId() throws SQLException {
+        String condition = "length(id) <> 6 OR id GLOB '*[01]*'";
+        return Math.max(SqliteStore.maxNumericId(db(), "estate_listings", condition), SqliteStore.maxNumericId(db(), "estate_leases", condition));
+    }
+
+    private List<EstateListing> loadOpenListings() throws SQLException {
         List<EstateListing> list = new ArrayList<>();
         try (PreparedStatement statement = db().prepareStatement("SELECT " + LISTING_COLUMNS + " FROM estate_listings WHERE status IN (?, ?) ORDER BY created")) {
             statement.setString(1, EstateListing.Status.ACTIVE.name());

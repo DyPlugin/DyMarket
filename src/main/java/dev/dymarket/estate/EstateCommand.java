@@ -73,7 +73,8 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
             case "leave" -> leave(sender, label, args);
             case "evict" -> evict(sender, args);
             case "mine" -> mine(sender);
-            default -> plugin.messages().send(sender, "estate.usage");
+            case "help" -> plugin.messages().send(sender, "estate.usage");
+            default -> Commands.problem(plugin, sender, "general.unknown-subcommand", Commands.values("{word}", args[0]), "estate.usage");
         }
         return true;
     }
@@ -104,21 +105,22 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
             if (CommandWords.is(args[i], "here")) here = true;
             else if (currencyId == null) currencyId = args[i].toLowerCase(Locale.ROOT);
             else {
-                plugin.messages().send(sender, usage);
+                Commands.problem(plugin, sender, "general.unknown-subcommand", Commands.values("{word}", args[i]), usage);
                 return;
             }
         }
         Currency currency = plugin.currencies().get(currencyId == null ? settings.defaultCurrency() : currencyId);
         if (currency == null) {
-            plugin.messages().send(sender, "general.unknown-currency", Commands.values("{currency}", currencyId == null ? settings.defaultCurrency() : currencyId,
-                    "{currencies}", String.join(", ", settings.allowedCurrencies())));
+            Commands.problem(plugin, sender, "general.unknown-currency", Commands.values("{currency}", currencyId == null ? settings.defaultCurrency() : currencyId,
+                    "{currencies}", String.join(", ", settings.allowedCurrencies())), usage);
             return;
         }
         OptionalLong price = CurrencyFormat.parse(currency, args[1]);
         if (price.isEmpty() || price.getAsLong() <= 0) {
-            plugin.messages().send(sender, "general.invalid-amount", Map.of("{amount}", args[1]));
+            Commands.problem(plugin, sender, "general.invalid-amount", Map.of("{amount}", args[1]), usage);
             return;
         }
+        if (Commands.waiting(plugin, player, "estate-list")) return;
         int days = 0;
         if (!sale) {
             try {
@@ -137,6 +139,7 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
             if (outcome.ok()) {
                 Map<String, String> values = service().values(outcome.listing(), used);
                 values.put("{tax}", percent(tax));
+                Commands.used(plugin, player, "estate-list");
                 Commands.reply(plugin, sender, sale ? "estate.listed-sale" : "estate.listed-rent", values);
                 return;
             }

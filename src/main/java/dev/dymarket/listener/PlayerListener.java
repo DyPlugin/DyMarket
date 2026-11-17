@@ -1,6 +1,7 @@
 package dev.dymarket.listener;
 
 import dev.dymarket.DyMarket;
+import dev.dymarket.command.Commands;
 import dev.dymarket.storage.SqliteStore;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -69,6 +70,7 @@ public final class PlayerListener implements Listener {
         UUID id = event.getPlayer().getUniqueId();
         String name = event.getPlayer().getName();
         plugin.rateLimiter().forget(id);
+        plugin.cooldowns().prune(Commands.longestCooldownMillis(plugin));
         plugin.messages().forget(id);
         plugin.io().execute(() -> {
             try {

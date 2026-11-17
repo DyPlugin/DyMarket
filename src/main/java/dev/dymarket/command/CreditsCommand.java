@@ -45,8 +45,8 @@ public final class CreditsCommand implements CommandExecutor, TabCompleter {
             case "" -> show(player, credits);
             case "send" -> send(player, credits, args);
             case "exchange" -> exchange(player, credits, args);
-            case "help" -> plugin.messages().getList(sender, "help.credits").forEach(sender::sendMessage);
-            default -> plugin.messages().send(sender, "credits.usage");
+            case "help" -> plugin.messages().send(sender, "credits.usage");
+            default -> Commands.problem(plugin, sender, "general.unknown-subcommand", Commands.values("{word}", args[0]), "credits.usage");
         }
         return true;
     }
@@ -73,9 +73,10 @@ public final class CreditsCommand implements CommandExecutor, TabCompleter {
         }
         OptionalLong amount = CurrencyFormat.parse(credits, args[2]);
         if (amount.isEmpty() || amount.getAsLong() <= 0) {
-            plugin.messages().send(player, "general.invalid-amount", Map.of("{amount}", args[2]));
+            Commands.problem(plugin, player, "general.invalid-amount", Map.of("{amount}", args[2]), "credits.send-usage");
             return;
         }
+        if (Commands.waiting(plugin, player, "credits-send")) return;
         if (!player.hasPermission("dymarket.bypass.ratelimit")
                 && !plugin.rateLimiter().tryAcquire(player.getUniqueId(), "pay", plugin.getConfig().getInt("security.rate-limit.pay-per-minute", 10))) {
             plugin.messages().send(player, "general.rate-limited");
@@ -99,6 +100,7 @@ public final class CreditsCommand implements CommandExecutor, TabCompleter {
                 Commands.failure(plugin, player, result, credits, values);
                 return;
             }
+            Commands.used(plugin, player, "credits-send");
             Commands.reply(plugin, player, "credits.sent", values);
             Player receiver = Bukkit.getPlayer(target.id());
             if (receiver != null) {
@@ -127,9 +129,10 @@ public final class CreditsCommand implements CommandExecutor, TabCompleter {
         }
         OptionalLong amount = CurrencyFormat.parse(credits, args[1]);
         if (amount.isEmpty() || amount.getAsLong() <= 0) {
-            plugin.messages().send(player, "general.invalid-amount", Map.of("{amount}", args[1]));
+            Commands.problem(plugin, player, "general.invalid-amount", Map.of("{amount}", args[1]), "credits.exchange-help");
             return;
         }
+        if (Commands.waiting(plugin, player, "credits-exchange")) return;
         if (amount.getAsLong() < plugin.credits().minimumExchange()) {
             plugin.messages().send(player, "credits.exchange-min", Map.of("{min}", CurrencyFormat.format(credits, plugin.credits().minimumExchange())));
             return;
@@ -142,6 +145,7 @@ public final class CreditsCommand implements CommandExecutor, TabCompleter {
                 Commands.failure(plugin, player, result, failed, Commands.money(credits, amount.getAsLong()));
                 return;
             }
+            Commands.used(plugin, player, "credits-exchange");
             Commands.reply(plugin, player, "credits.exchanged", Commands.values("{credits}", CurrencyFormat.format(credits, amount.getAsLong()),
                     "{money}", CurrencyFormat.format(money, plugin.credits().exchangeValue(amount.getAsLong())),
                     "{balance}", CurrencyFormat.format(money, result.balance())));
@@ -158,6 +162,8 @@ public final class CreditsCommand implements CommandExecutor, TabCompleter {
             return Commands.complete(args[0], options);
         }
         if (args.length == 2 && CommandWords.is(args[0], "send")) return Commands.onlineNames(args[1]);
+        if (args.length == 3 && CommandWords.is(args[0], "send")) return Commands.amountHints(args[2]);
+        if (args.length == 2 && CommandWords.is(args[0], "exchange")) return Commands.amountHints(args[1]);
         return List.of();
     }
 }

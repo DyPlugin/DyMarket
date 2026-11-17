@@ -47,13 +47,13 @@ public final class PayCommand implements CommandExecutor, TabCompleter {
         int extra = args.length - (confirmed ? 1 : 0);
         Currency currency = extra >= 3 ? plugin.currencies().get(args[2]) : plugin.currencies().primary();
         if (currency == null) {
-            plugin.messages().send(sender, "general.unknown-currency", Commands.values("{currency}", args[2],
-                    "{currencies}", String.join(", ", plugin.currencies().ids())));
+            Commands.problem(plugin, sender, "general.unknown-currency", Commands.values("{currency}", args[2],
+                    "{currencies}", String.join(", ", plugin.currencies().ids())), "pay.usage");
             return true;
         }
         OptionalLong parsed = CurrencyFormat.parse(currency, args[1]);
         if (parsed.isEmpty() || parsed.getAsLong() <= 0) {
-            plugin.messages().send(sender, "general.invalid-amount", Map.of("{amount}", args[1]));
+            Commands.problem(plugin, sender, "general.invalid-amount", Map.of("{amount}", args[1]), "pay.usage");
             return true;
         }
         long amount = parsed.getAsLong();
@@ -76,6 +76,7 @@ public final class PayCommand implements CommandExecutor, TabCompleter {
             plugin.messages().send(sender, "pay.confirm", values);
             return true;
         }
+        if (Commands.waiting(plugin, player, "pay")) return true;
         if (!sender.hasPermission("dymarket.bypass.ratelimit")
                 && !plugin.rateLimiter().tryAcquire(player.getUniqueId(), "pay", plugin.getConfig().getInt("security.rate-limit.pay-per-minute", 10))) {
             plugin.messages().send(sender, "general.rate-limited");
@@ -100,6 +101,7 @@ public final class PayCommand implements CommandExecutor, TabCompleter {
                 return;
             }
             values.put("{balance}", CurrencyFormat.format(currency, result.balance()));
+            Commands.used(plugin, player, "pay");
             Commands.reply(plugin, sender, "pay.sent", values);
             Player receiver = Bukkit.getPlayer(target.id());
             if (receiver != null) {
@@ -114,6 +116,7 @@ public final class PayCommand implements CommandExecutor, TabCompleter {
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (args.length == 1) return Commands.onlineNames(args[0]);
+        if (args.length == 2) return Commands.amountHints(args[1]);
         if (args.length == 3) return Commands.complete(args[2], plugin.currencies().all().stream().filter(Currency::transferable).map(Currency::id).toList());
         return List.of();
     }

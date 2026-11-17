@@ -45,7 +45,7 @@ class ResourcesTest {
     @Test void everyMessageTheCodeSendsExists() throws Exception {
         YamlConfiguration english = resource("messages_en.yml");
         YamlConfiguration config = resource("config.yml");
-        Pattern used = Pattern.compile("\"((?:general|economy|balance|pay|baltop|credits|admin|help|alerts|updates|value|auction|auction-gui|estate|estate-gui)\\.[a-z.-]+)\"");
+        Pattern used = Pattern.compile("\"((?:general|economy|economy-help|balance|pay|baltop|credits|admin|help|alerts|updates|value|auction|auction-gui|estate|estate-gui)\\.[a-z.-]+)\"");
         Set<String> missing = new TreeSet<>();
         try (Stream<Path> files = Files.walk(Path.of("src/main/java"))) {
             for (Path file : files.filter(path -> path.toString().endsWith(".java")).toList()) {
@@ -110,14 +110,17 @@ class ResourcesTest {
         Map<String, List<String>> aliases = Map.of("balance", List.of("bal", "money", "para", "bakiye"), "pay", List.of("ode", "gonder"),
                 "baltop", List.of("balancetop", "paratop", "zenginler"), "credits", List.of("credit", "kredi"),
                 "ah", List.of("auction", "auctionhouse", "pazar", "muzayede"), "estate", List.of("realestate", "emlak"),
-                "dymarket", List.of("dym", "dyma"));
+                "dymarket", List.of("dym", "market"), "economy", List.of("eco", "ekonomi"));
         aliases.forEach((command, expected) -> assertEquals(expected, plugin.getStringList("commands." + command + ".aliases"), command));
+        assertEquals("dymarket.admin", plugin.getString("commands.dyma.permission"), "/dyma is the admin shortcut");
+        assertEquals("dymarket.admin.economy", plugin.getString("commands.economy.permission"), "/economy is only for staff who manage money");
         String text = new String(java.util.Objects.requireNonNull(getClass().getClassLoader().getResourceAsStream("plugin.yml"))
                 .readAllBytes(), StandardCharsets.UTF_8);
         for (String permission : List.of("dymarket.balance", "dymarket.balance.others", "dymarket.pay", "dymarket.baltop", "dymarket.credits",
                 "dymarket.credits.send", "dymarket.credits.exchange", "dymarket.ah", "dymarket.ah.sell", "dymarket.estate",
                 "dymarket.estate.sell", "dymarket.estate.rent", "dymarket.admin", "dymarket.admin.economy", "dymarket.admin.ah",
-                "dymarket.admin.estate", "dymarket.admin.alerts", "dymarket.bypass.ratelimit", "dymarket.bypass.tax"))
+                "dymarket.admin.estate", "dymarket.admin.alerts", "dymarket.bypass.ratelimit", "dymarket.bypass.tax",
+                "dymarket.bypass.cooldown", "dymarket.player"))
             assertTrue(text.contains("\n  " + permission + ":"), permission);
     }
 

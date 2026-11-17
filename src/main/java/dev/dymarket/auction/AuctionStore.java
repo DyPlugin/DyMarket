@@ -46,6 +46,11 @@ public final class AuctionStore implements AuctionService.Storage {
         }
     }
 
+    /** The highest numbered listing id; ids from before 1.1.0-BETA were six random letters and digits 2-9. */
+    public long maxListingId() throws SQLException {
+        return SqliteStore.maxNumericId(db(), "auction_listings", "length(id) <> 6 OR id GLOB '*[01]*'");
+    }
+
     @Override
     public List<Listing> loadActive() throws SQLException {
         List<Listing> list = new ArrayList<>();
@@ -101,6 +106,15 @@ public final class AuctionStore implements AuctionService.Storage {
             statement.setString(2, buyer == null ? null : buyer.toString());
             statement.setString(3, id);
             statement.setString(4, from.name());
+            return statement.executeUpdate() == 1;
+        }
+    }
+
+    @Override
+    public boolean updatePrice(String id, long price) throws SQLException {
+        try (PreparedStatement statement = db().prepareStatement("UPDATE auction_listings SET price = ? WHERE id = ? AND status = 'ACTIVE'")) {
+            statement.setLong(1, price);
+            statement.setString(2, id);
             return statement.executeUpdate() == 1;
         }
     }

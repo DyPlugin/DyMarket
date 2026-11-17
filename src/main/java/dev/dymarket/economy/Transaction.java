@@ -13,9 +13,15 @@ public record Transaction(String id, long timestamp, TransactionKind kind, Strin
         return new Transaction(id, timestamp, kind, currency, from, to, amount, fromAfter, toAfter, note, externalId, reversal);
     }
 
-    /** A short random id, easy to type in /dymarket rollback. */
+    private static final java.util.concurrent.atomic.AtomicLong SEQUENCE = new java.util.concurrent.atomic.AtomicLong();
+
+    /** Continues numbering after the highest stored id (start-up). */
+    public static void seed(long last) {
+        SEQUENCE.accumulateAndGet(last, Math::max);
+    }
+
+    /** The next transaction number, short and easy to type in /dyma rollback. */
     public static String newId() {
-        String text = UUID.randomUUID().toString().replace("-", "");
-        return text.substring(0, 12);
+        return Long.toString(SEQUENCE.incrementAndGet());
     }
 }

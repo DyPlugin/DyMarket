@@ -35,6 +35,10 @@ final class ConfigValidator {
         bounded(config, "security.rate-limit.pay-per-minute", 0, 100000);
         bounded(config, "security.rate-limit.ah-buy-per-minute", 0, 100000);
         number(config, "security.alert.transfer-above", 0, true);
+        for (String action : dev.dymarket.command.Commands.COOLDOWNS) {
+            number(config, "cooldowns." + action, 0, true);
+            if (config.getDouble("cooldowns." + action, 0) > 86400) invalid("cooldowns." + action, "expected 0-86400 seconds");
+        }
         bounded(config, "baltop.page-size", 1, 100);
         bounded(config, "baltop.refresh-seconds", 5, 86400);
 

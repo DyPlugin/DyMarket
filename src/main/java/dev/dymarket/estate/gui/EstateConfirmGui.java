@@ -60,8 +60,10 @@ public final class EstateConfirmGui extends EstateWindow {
             module.plugin().messages().send(player, "general.no-permission");
             return;
         }
+        if (Commands.waiting(module.plugin(), player, "estate-buy")) return;
         java.util.function.Consumer<EstateService.Outcome> done = outcome -> {
             if (outcome.ok()) {
+                Commands.used(module.plugin(), player, "estate-buy");
                 Map<String, String> values = module.service().values(listing, module.plugin().currencies().get(listing.currency()));
                 Commands.reply(module.plugin(), player, sale ? "estate.bought" : "estate.leased", values);
             } else {

@@ -64,6 +64,17 @@ security:
     notify-permission: dymarket.admin.alerts
     discord: true          # through DyDiscord when available
 
+# Seconds a player waits between two uses of an action; 0 = no wait. Decimals work (1.5).
+# Players with dymarket.bypass.cooldown never wait. A running wait survives leaving and rejoining.
+cooldowns:
+  pay: 3                   # /pay
+  credits-send: 5          # /credits send
+  credits-exchange: 3      # /credits exchange
+  ah-sell: 3               # /ah sell
+  ah-buy: 1                # buying in the auction house
+  estate-list: 10          # /estate sell and /estate rent
+  estate-buy: 5            # buying or renting a claim
+
 baltop:
   page-size: 10
   refresh-seconds: 60

@@ -43,23 +43,99 @@ public final class DyMarketCommand implements CommandExecutor, TabCompleter {
         this.plugin = plugin;
     }
 
+    /** Rows shown to players on a help page; the console sees all rows at once. */
+    static final int HELP_PAGE_SIZE = 8;
+    static final List<String> PLAYER_HELP = List.of("balance", "balance-others", "pay", "baltop", "credits", "credits-send",
+            "credits-exchange", "ah", "ah-sell", "ah-search", "ah-collect", "estate", "estate-sell", "estate-rent", "estate-mine",
+            "language", "short");
+    static final List<String> ADMIN_HELP = List.of("give", "take", "set", "reset", "log", "rollback", "merge", "import",
+            "ah-remove", "ah-price", "ah-purge", "estate-unlist", "lang", "reload", "dyma", "eco");
+    /** /economy (/eco): only the balance commands, for staff who manage money. */
+    static final List<String> ECONOMY_WORDS = List.of("give", "take", "set", "reset", "log", "rollback", "merge", "import");
+    /** Admin words that still work straight after /dymarket, as in 1.0 (web stores deliver with /dymarket give). */
+    private static final List<String> LEGACY_ADMIN_WORDS = List.of("give", "take", "set", "reset", "log", "rollback", "merge", "import",
+            "ah", "auction", "estate", "reload");
+
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        // "/dymarket:market" is shown as "/market" in the next-page hint.
+        label = label.substring(label.indexOf(':') + 1);
+        if (command.getName().equalsIgnoreCase("dyma")) {
+            admin(sender, "/" + label, args);
+            return true;
+        }
+        if (command.getName().equalsIgnoreCase("economy")) {
+            economy(sender, "/" + label, args);
+            return true;
+        }
         String sub = args.length == 0 ? "help" : CommandWords.canonical(args[0]);
         switch (sub) {
-            case "help" -> help(sender);
-            case "reload" -> reload(sender);
+            case "help" -> help(sender, false, args.length > 1 ? args[1] : null, "/" + label);
             case "language" -> language(sender, args);
+            case "admin" -> admin(sender, "/" + label + " " + args[0], Arrays.copyOfRange(args, 1, args.length));
+            default -> {
+                if (!LEGACY_ADMIN_WORDS.contains(sub) || !adminAction(sender, sub, args))
+                    plugin.messages().send(sender, "general.unknown-command");
+            }
+        }
+        return true;
+    }
+
+    /** /dymarket admin ... and /dyma ...: the admin help, or one admin action. */
+    private void admin(CommandSender sender, String root, String[] args) {
+        if (!anyAdmin(sender)) {
+            plugin.messages().send(sender, "general.no-permission");
+            return;
+        }
+        String sub = args.length == 0 ? "help" : CommandWords.canonical(args[0]);
+        if (sub.equals("help")) {
+            help(sender, true, args.length > 1 ? args[1] : null, root);
+            return;
+        }
+        if (sub.equals("language")) {
+            serverLanguage(sender, args);
+            return;
+        }
+        if (!adminAction(sender, sub, args)) plugin.messages().send(sender, "admin.unknown", Commands.values("{command}", root + " " + helpWord(sender)));
+    }
+
+    /** /economy ...: the economy help, or one balance command. */
+    private void economy(CommandSender sender, String root, String[] args) {
+        if (!sender.hasPermission("dymarket.admin.economy")) {
+            plugin.messages().send(sender, "general.no-permission");
+            return;
+        }
+        String sub = args.length == 0 ? "help" : CommandWords.canonical(args[0]);
+        if (sub.equals("help")) {
+            List<String> rows = new ArrayList<>();
+            for (String word : ECONOMY_WORDS) rows.add("admin-help." + word);
+            help(sender, rows, "economy-help.header", "admin-help.footer", args.length > 1 ? args[1] : null, root, "/dyma ");
+            return;
+        }
+        if (!ECONOMY_WORDS.contains(sub) || !adminAction(sender, sub, args))
+            plugin.messages().send(sender, "admin.unknown", Commands.values("{command}", root + " " + helpWord(sender)));
+    }
+
+    private boolean anyAdmin(CommandSender sender) {
+        return sender.hasPermission("dymarket.admin") || sender.hasPermission("dymarket.admin.economy")
+                || sender.hasPermission("dymarket.admin.ah") || sender.hasPermission("dymarket.admin.estate");
+    }
+
+    /** Runs one admin action named by {@code sub} (args[0] is the action word); false when there is no such action. */
+    private boolean adminAction(CommandSender sender, String sub, String[] args) {
+        switch (sub) {
+            case "reload" -> reload(sender);
             case "give" -> { if (economyAdmin(sender)) give(sender, args); }
             case "take" -> { if (economyAdmin(sender)) take(sender, args); }
             case "set" -> { if (economyAdmin(sender)) set(sender, args); }
+            case "reset" -> { if (economyAdmin(sender)) reset(sender, args); }
             case "log" -> { if (economyAdmin(sender)) log(sender, args); }
             case "rollback" -> { if (economyAdmin(sender)) rollback(sender, args); }
             case "merge" -> { if (economyAdmin(sender)) merge(sender, args); }
             case "import" -> { if (economyAdmin(sender)) importBalances(sender, args); }
             case "ah", "auction" -> module(sender, "auction", "dymarket.admin.ah", args);
             case "estate" -> module(sender, "estate", "dymarket.admin.estate", args);
-            default -> plugin.messages().send(sender, "general.unknown-command");
+            default -> { return false; }
         }
         return true;
     }
@@ -70,38 +146,79 @@ public final class DyMarketCommand implements CommandExecutor, TabCompleter {
         return false;
     }
 
-    // ---- help, reload, language -----------------------------------------------------------------------------
-
-    private void help(CommandSender sender) {
-        List<String> lines = new ArrayList<>(plugin.messages().getList(sender, "help.header"));
-        group(sender, lines, "dymarket.balance", "help.balance");
-        group(sender, lines, "dymarket.balance.others", "help.balance-others");
-        if (plugin.getConfig().getBoolean("pay.enabled", true)) group(sender, lines, "dymarket.pay", "help.pay");
-        group(sender, lines, "dymarket.baltop", "help.baltop");
-        if (plugin.credits().enabled()) {
-            group(sender, lines, "dymarket.credits", "help.credits");
-            group(sender, lines, "dymarket.credits.send", "help.credits-send");
-            if (plugin.getConfig().getBoolean("credits.exchange.enabled", true)) group(sender, lines, "dymarket.credits.exchange", "help.credits-exchange");
-        }
-        if (plugin.moduleLoaded("auction")) {
-            group(sender, lines, "dymarket.ah", "help.auction");
-            group(sender, lines, "dymarket.ah.sell", "help.auction-sell");
-        }
-        if (plugin.moduleLoaded("estate")) {
-            group(sender, lines, "dymarket.estate", "help.estate");
-            group(sender, lines, "dymarket.estate.sell", "help.estate-sell");
-            group(sender, lines, "dymarket.estate.rent", "help.estate-rent");
-        }
-        lines.addAll(plugin.messages().getList(sender, "help.language"));
-        group(sender, lines, "dymarket.admin", "help.admin");
-        group(sender, lines, "dymarket.admin.economy", "help.admin-economy");
-        if (plugin.moduleLoaded("auction")) group(sender, lines, "dymarket.admin.ah", "help.admin-auction");
-        if (plugin.moduleLoaded("estate")) group(sender, lines, "dymarket.admin.estate", "help.admin-estate");
-        lines.forEach(sender::sendMessage);
+    private String helpWord(CommandSender sender) {
+        return CommandWords.display("help", Commands.turkish(plugin, sender));
     }
 
-    private void group(CommandSender sender, List<String> lines, String permission, String key) {
-        if (sender.hasPermission(permission)) lines.addAll(plugin.messages().getList(sender, key));
+    // ---- help, reload, language -----------------------------------------------------------------------------
+
+    List<String> helpRows(CommandSender sender, boolean admin) {
+        List<String> rows = new ArrayList<>();
+        boolean player = sender instanceof Player;
+        if (admin) {
+            for (String row : ADMIN_HELP) {
+                boolean allowed = switch (row) {
+                    case "lang", "reload" -> sender.hasPermission("dymarket.admin");
+                    case "dyma" -> anyAdmin(sender);
+                    case "eco" -> sender.hasPermission("dymarket.admin.economy");
+                    case "ah-remove", "ah-price", "ah-purge" -> plugin.moduleLoaded("auction") && sender.hasPermission("dymarket.admin.ah");
+                    case "estate-unlist" -> plugin.moduleLoaded("estate") && sender.hasPermission("dymarket.admin.estate");
+                    default -> sender.hasPermission("dymarket.admin.economy");
+                };
+                if (allowed) rows.add("admin-help." + row);
+            }
+            return rows;
+        }
+        boolean credits = plugin.credits().enabled();
+        boolean auction = plugin.moduleLoaded("auction");
+        boolean estate = plugin.moduleLoaded("estate");
+        for (String row : PLAYER_HELP) {
+            boolean allowed = switch (row) {
+                case "balance" -> player && sender.hasPermission("dymarket.balance");
+                case "balance-others" -> sender.hasPermission("dymarket.balance.others");
+                case "pay" -> player && plugin.getConfig().getBoolean("pay.enabled", true) && sender.hasPermission("dymarket.pay");
+                case "baltop" -> sender.hasPermission("dymarket.baltop");
+                case "credits" -> player && credits && sender.hasPermission("dymarket.credits");
+                case "credits-send" -> player && credits && sender.hasPermission("dymarket.credits.send");
+                case "credits-exchange" -> player && credits && plugin.getConfig().getBoolean("credits.exchange.enabled", true)
+                        && sender.hasPermission("dymarket.credits.exchange");
+                case "ah", "ah-search" -> auction && sender.hasPermission("dymarket.ah");
+                case "ah-sell" -> player && auction && sender.hasPermission("dymarket.ah.sell");
+                case "ah-collect" -> player && auction && sender.hasPermission("dymarket.ah");
+                case "estate" -> estate && sender.hasPermission("dymarket.estate");
+                case "estate-sell" -> player && estate && sender.hasPermission("dymarket.estate.sell");
+                case "estate-rent" -> player && estate && sender.hasPermission("dymarket.estate.rent");
+                case "estate-mine" -> player && estate && sender.hasPermission("dymarket.estate");
+                default -> true;
+            };
+            if (allowed) rows.add("help-v2." + row);
+        }
+        if (anyAdmin(sender)) rows.add("help-v2.admin");
+        return rows;
+    }
+
+    /** Players get short pages with the command for the next one; the console gets every row at once. */
+    private void help(CommandSender sender, boolean admin, String requestedPage, String root) {
+        help(sender, helpRows(sender, admin), admin ? "admin-help.header" : "help-v2.header", admin ? "admin-help.footer" : "help-v2.footer",
+                requestedPage, root, null);
+    }
+
+    /** {@code command} in the rows, when given, is replaced with {@code root}: /eco shows "/eco give" for "/dyma give". */
+    private void help(CommandSender sender, List<String> rows, String header, String footer, String requestedPage, String root, String command) {
+        int size = sender instanceof Player ? HELP_PAGE_SIZE : Math.max(1, rows.size());
+        int pages = Math.max(1, (rows.size() + size - 1) / size);
+        int page = Math.min(Commands.page(requestedPage, 1), pages);
+        plugin.messages().send(sender, header);
+        for (String key : rows.subList((page - 1) * size, Math.min(rows.size(), page * size))) {
+            if (command == null) plugin.messages().send(sender, key);
+            else sender.sendMessage(plugin.messages().get(sender, key).replace(command, root + " "));
+        }
+        if (pages > 1) {
+            String next = root + " " + helpWord(sender) + " " + (page + 1);
+            plugin.messages().send(sender, page < pages ? "help-v2.page-next" : "help-v2.page",
+                    Commands.values("{page}", String.valueOf(page), "{pages}", String.valueOf(pages), "{command}", next));
+        }
+        plugin.messages().send(sender, footer);
     }
 
     private void reload(CommandSender sender) {
@@ -112,14 +229,28 @@ public final class DyMarketCommand implements CommandExecutor, TabCompleter {
         plugin.messages().send(sender, plugin.tryReloadPlugin() ? "general.reload" : "general.reload-failed");
     }
 
-    private void language(CommandSender sender, String[] args) {
-        if (args.length < 2) {
-            plugin.messages().send(sender, "general.invalid-language");
+    /** /dyma language &lt;auto|en|tr|de|es|ru&gt;: the language for everyone (players can still pick their own). */
+    private void serverLanguage(CommandSender sender, String[] args) {
+        if (!sender.hasPermission("dymarket.admin")) {
+            plugin.messages().send(sender, "general.no-permission");
             return;
         }
-        String code = CommandWords.is(args[1], "auto") ? "auto" : CommandWords.plain(args[1]);
-        if (!code.equals("auto") && !Language.codes().contains(code)) {
-            plugin.messages().send(sender, "general.invalid-language");
+        String code = args.length < 2 ? null : CommandWords.is(args[1], "auto") ? "auto" : CommandWords.plain(args[1]);
+        if (code == null || !code.equals("auto") && !Language.codes().contains(code)) {
+            Commands.problem(plugin, sender, "general.invalid-language", Map.of(), "admin.language-usage");
+            return;
+        }
+        if (!plugin.applyConfigChanges(Map.of("language.default", code))) {
+            plugin.messages().send(sender, "general.reload-failed");
+            return;
+        }
+        plugin.messages().send(sender, "general.server-language-changed", Map.of("{language}", plugin.messages().get(sender, "value.language-" + code)));
+    }
+
+    private void language(CommandSender sender, String[] args) {
+        String code = args.length < 2 ? null : CommandWords.is(args[1], "auto") ? "auto" : CommandWords.plain(args[1]);
+        if (code == null || !code.equals("auto") && !Language.codes().contains(code)) {
+            Commands.problem(plugin, sender, "general.invalid-language", Map.of(), "general.language-usage");
             return;
         }
         if (sender instanceof Player player) {
@@ -143,23 +274,69 @@ public final class DyMarketCommand implements CommandExecutor, TabCompleter {
     /** Parsed "&lt;player&gt; &lt;amount&gt; [currency] ..." arguments, or null after telling the sender what is wrong. */
     private record Amount(String player, Currency currency, long minor, int next) { }
 
+    /** Accepts "&lt;player&gt; &lt;amount&gt; [currency]" and "&lt;player&gt; &lt;currency&gt; &lt;amount&gt;". */
     private Amount amount(CommandSender sender, String[] args, String usage, boolean allowZero) {
         if (args.length < 3) {
             plugin.messages().send(sender, usage);
             return null;
         }
         Currency currency = plugin.currencies().primary();
+        String amountText = args[2];
         int next = 3;
-        if (args.length > 3 && plugin.currencies().get(args[3]) != null) {
+        Currency first = plugin.currencies().get(args[2]);
+        if (first != null && args.length > 3) {
+            currency = first;
+            amountText = args[3];
+            next = 4;
+        } else if (args.length > 3 && plugin.currencies().get(args[3]) != null) {
             currency = plugin.currencies().get(args[3]);
             next = 4;
+        } else if (first != null) {
+            Map<String, String> values = Commands.money(first, 0);
+            values.put("{currency}", first.plural());
+            Commands.problem(plugin, sender, "admin.amount-missing", values, usage);
+            return null;
         }
-        OptionalLong minor = CurrencyFormat.parse(currency, args[2]);
+        OptionalLong minor = CurrencyFormat.parse(currency, amountText);
         if (minor.isEmpty() || minor.getAsLong() < 0 || !allowZero && minor.getAsLong() == 0) {
-            plugin.messages().send(sender, "general.invalid-amount", Map.of("{amount}", args[2]));
+            Commands.problem(plugin, sender, "general.invalid-amount", Map.of("{amount}", amountText), usage);
             return null;
         }
         return new Amount(args[1], currency, minor.getAsLong(), next);
+    }
+
+    /** /dyma reset &lt;player&gt; [currency]: back to the starting balance (every currency when none is named). */
+    private void reset(CommandSender sender, String[] args) {
+        if (args.length < 2) {
+            plugin.messages().send(sender, "admin.reset-usage");
+            return;
+        }
+        Currency only = args.length > 2 ? plugin.currencies().get(args[2]) : null;
+        if (args.length > 2 && only == null) {
+            Commands.problem(plugin, sender, "general.unknown-currency", Commands.values("{currency}", args[2],
+                    "{currencies}", String.join(", ", plugin.currencies().ids())), "admin.reset-usage");
+            return;
+        }
+        plugin.io().execute(() -> {
+            Commands.Target target = Commands.resolve(plugin, args[1]);
+            if (target == null) {
+                Commands.reply(plugin, sender, "general.player-not-found", Commands.values("{player}", args[1]));
+                return;
+            }
+            for (Currency currency : only != null ? List.of(only) : plugin.currencies().all()) {
+                if (currency.external()) continue;
+                TransactionResult result = plugin.economy().set(target.id(), currency, currency.startingBalance(), note(sender));
+                Map<String, String> values = Commands.money(currency, currency.startingBalance());
+                values.put("{player}", target.display());
+                if (!result.success()) {
+                    Commands.failure(plugin, sender, result, currency, values);
+                    return;
+                }
+                values.put("{balance}", CurrencyFormat.format(currency, result.balance()));
+                values.put("{currency}", currency.plural());
+                Commands.reply(plugin, sender, "admin.reset", values);
+            }
+        });
     }
 
     private void give(CommandSender sender, String[] args) {
@@ -167,7 +344,7 @@ public final class DyMarketCommand implements CommandExecutor, TabCompleter {
         if (parsed == null) return;
         String txid = args.length > parsed.next() ? args[parsed.next()] : null;
         if (txid != null && !txid.matches("[A-Za-z0-9_.:\\-]{1,128}")) {
-            plugin.messages().send(sender, "admin.invalid-txid", Map.of("{txid}", txid));
+            Commands.problem(plugin, sender, "admin.invalid-txid", Map.of("{txid}", txid), "admin.give-usage");
             return;
         }
         Currency currency = parsed.currency();
@@ -479,22 +656,50 @@ public final class DyMarketCommand implements CommandExecutor, TabCompleter {
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         boolean turkish = Commands.turkish(plugin, sender);
+        if (command.getName().equalsIgnoreCase("dyma")) return adminComplete(sender, args, turkish);
+        if (command.getName().equalsIgnoreCase("economy")) {
+            if (!sender.hasPermission("dymarket.admin.economy")) return List.of();
+            if (args.length == 1) {
+                List<String> options = new ArrayList<>(List.of(CommandWords.display("help", turkish)));
+                options.addAll(CommandWords.choices(turkish, ECONOMY_WORDS.toArray(String[]::new)));
+                return Commands.complete(args[0], options);
+            }
+            if (args.length == 2 && CommandWords.canonical(args[0]).equals("help")) {
+                int pages = (ECONOMY_WORDS.size() + HELP_PAGE_SIZE - 1) / HELP_PAGE_SIZE;
+                List<String> options = new ArrayList<>();
+                for (int i = 1; i <= pages && sender instanceof Player; i++) options.add(String.valueOf(i));
+                return Commands.complete(args[1], options);
+            }
+            return ECONOMY_WORDS.contains(CommandWords.canonical(args[0])) ? adminComplete(sender, args, turkish) : List.of();
+        }
         if (args.length == 1) {
             List<String> options = new ArrayList<>(CommandWords.choices(turkish, "help", "language"));
-            if (sender.hasPermission("dymarket.admin")) options.add(CommandWords.display("reload", turkish));
-            if (sender.hasPermission("dymarket.admin.economy"))
-                options.addAll(CommandWords.choices(turkish, "give", "take", "set", "log", "rollback", "merge", "import"));
-            if (sender.hasPermission("dymarket.admin.ah")) options.add("ah");
-            if (sender.hasPermission("dymarket.admin.estate")) options.add("estate");
+            if (anyAdmin(sender)) options.add("admin");
             return Commands.complete(args[0], options);
         }
         String sub = CommandWords.canonical(args[0]);
-        if (sub.equals("language") && args.length == 2) {
-            List<String> codes = new ArrayList<>();
-            codes.add(CommandWords.display("auto", turkish));
-            codes.addAll(Language.codes());
-            return Commands.complete(args[1], codes);
+        if (sub.equals("help") && args.length == 2) return pages(sender, false, args[1]);
+        if (sub.equals("language") && args.length == 2) return languages(args[1], turkish);
+        if (sub.equals("admin")) return adminComplete(sender, Arrays.copyOfRange(args, 1, args.length), turkish);
+        if (LEGACY_ADMIN_WORDS.contains(sub)) return adminComplete(sender, args, turkish);
+        return List.of();
+    }
+
+    private List<String> adminComplete(CommandSender sender, String[] args, boolean turkish) {
+        if (!anyAdmin(sender) || args.length == 0) return List.of();
+        if (args.length == 1) {
+            List<String> options = new ArrayList<>();
+            options.add(CommandWords.display("help", turkish));
+            if (sender.hasPermission("dymarket.admin.economy"))
+                options.addAll(CommandWords.choices(turkish, "give", "take", "set", "reset", "log", "rollback", "merge", "import"));
+            if (sender.hasPermission("dymarket.admin.ah") && plugin.moduleLoaded("auction")) options.add("ah");
+            if (sender.hasPermission("dymarket.admin.estate") && plugin.moduleLoaded("estate")) options.add("estate");
+            if (sender.hasPermission("dymarket.admin")) options.addAll(CommandWords.choices(turkish, "language", "reload"));
+            return Commands.complete(args[0], options);
         }
+        String sub = CommandWords.canonical(args[0]);
+        if (sub.equals("help") && args.length == 2) return pages(sender, true, args[1]);
+        if (sub.equals("language") && args.length == 2 && sender.hasPermission("dymarket.admin")) return languages(args[1], turkish);
         if (sub.equals("ah") || sub.equals("auction") || sub.equals("estate")) {
             String module = sub.equals("estate") ? "estate" : "auction";
             AdminSubcommand handler = plugin.adminCommand(module);
@@ -505,7 +710,14 @@ public final class DyMarketCommand implements CommandExecutor, TabCompleter {
         switch (sub) {
             case "give", "take", "set" -> {
                 if (args.length == 2) return Commands.onlineNames(args[1]);
-                if (args.length == 4) return Commands.complete(args[3], plugin.currencies().ids());
+                if (args.length == 3) return args[2].isEmpty() || Character.isDigit(args[2].charAt(0))
+                        ? Commands.amountHints(args[2]) : Commands.complete(args[2], plugin.currencies().ids());
+                if (args.length == 4) return plugin.currencies().get(args[2]) != null
+                        ? Commands.amountHints(args[3]) : Commands.complete(args[3], plugin.currencies().ids());
+            }
+            case "reset" -> {
+                if (args.length == 2) return Commands.onlineNames(args[1]);
+                if (args.length == 3) return Commands.complete(args[2], plugin.currencies().ids());
             }
             case "log" -> {
                 if (args.length == 2) return Commands.onlineNames(args[1]);
@@ -522,5 +734,20 @@ public final class DyMarketCommand implements CommandExecutor, TabCompleter {
             default -> { }
         }
         return List.of();
+    }
+
+    private List<String> pages(CommandSender sender, boolean admin, String typed) {
+        if (!(sender instanceof Player)) return List.of();
+        int pages = Math.max(1, (helpRows(sender, admin).size() + HELP_PAGE_SIZE - 1) / HELP_PAGE_SIZE);
+        List<String> options = new ArrayList<>();
+        for (int i = 1; i <= pages; i++) options.add(String.valueOf(i));
+        return Commands.complete(typed, options);
+    }
+
+    private static List<String> languages(String typed, boolean turkish) {
+        List<String> codes = new ArrayList<>();
+        codes.add(CommandWords.display("auto", turkish));
+        codes.addAll(Language.codes());
+        return Commands.complete(typed, codes);
     }
 }

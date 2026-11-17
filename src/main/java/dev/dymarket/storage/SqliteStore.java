@@ -151,6 +151,22 @@ public final class SqliteStore implements EconomyStore {
         }
     }
 
+    /**
+     * The highest short number used as an id in {@code table}, so new ids continue from it. Ids from before 1.1.0-BETA
+     * were random letters and digits; {@code newIdCondition} tells those apart from numbers DyMarket handed out.
+     */
+    public static long maxNumericId(Connection connection, String table, String newIdCondition) throws SQLException {
+        String sql = "SELECT MAX(CAST(id AS INTEGER)) FROM " + table + " WHERE id <> '' AND id NOT GLOB '*[^0-9]*' AND (" + newIdCondition + ")";
+        try (Statement statement = connection.createStatement(); ResultSet result = statement.executeQuery(sql)) {
+            return result.next() ? result.getLong(1) : 0;
+        }
+    }
+
+    /** The highest numbered transaction id; random ids from before 1.1.0-BETA are 12 characters long. */
+    public long maxTransactionId() throws SQLException {
+        return maxNumericId(connection, "transactions", "length(id) < 12");
+    }
+
     public String meta(String key) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement("SELECT value FROM meta WHERE key = ?")) {
             statement.setString(1, key);

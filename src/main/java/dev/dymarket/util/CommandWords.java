@@ -25,9 +25,10 @@ public final class CommandWords {
                 {"buy", "satınal"}, {"collect", "topla"}, {"cancel", "iptal"}, {"search", "ara"}, {"mine", "benim"},
                 {"send", "gönder"}, {"exchange", "çevir"}, {"autorenew", "otoyenile"}, {"leave", "ayrıl"},
                 {"evict", "tahliye"}, {"remove", "sil"}, {"purge", "temizle"}, {"lease", "tut"},
-                {"confirm", "onayla"}, {"force", "zorla"}, {"auto", "oto"}, {"here", "burası"}};
+                {"confirm", "onayla"}, {"force", "zorla"}, {"auto", "oto"}, {"here", "burası"}, {"reset", "sıfırla"}, {"price", "fiyat"}};
         for (String[] pair : pairs) TR.put(pair[0], pair[1]);
         EXTRA.put("lang", "language");
+        EXTRA.put("yonetici", "admin");
         EXTRA.put("otomatik", "auto");
         EXTRA.put("logs", "log");
         EXTRA.put("history", "log");

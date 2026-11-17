@@ -39,7 +39,8 @@ class AuctionServiceTest {
         final Map<String, UUID> buyers = new HashMap<>();
         final Map<Long, CollectEntry> collect = new LinkedHashMap<>();
         long nextId = 1;
-        boolean failInsert, failCollect;
+        final Map<String, Long> prices = new HashMap<>();
+        boolean failInsert, failCollect, failPrice;
 
         @Override public List<Listing> loadActive() { return List.of(); }
 
@@ -60,6 +61,13 @@ class AuctionServiceTest {
             if (failCollect) throw new java.sql.SQLException("disk full");
             if (!transition(id, ListingStatus.ACTIVE, to, null)) return false;
             addCollect(owner, items.get(id), reason, timestamp);
+            return true;
+        }
+
+        @Override public boolean updatePrice(String id, long price) throws Exception {
+            if (failPrice) throw new java.sql.SQLException("disk full");
+            if (status.get(id) != ListingStatus.ACTIVE) return false;
+            prices.put(id, price);
             return true;
         }
 
@@ -369,6 +377,23 @@ class AuctionServiceTest {
         assertEquals(List.of(CollectEntry.REMOVED, CollectEntry.REMOVED, CollectEntry.REMOVED), store.reasons(seller));
         assertEquals(0, service.activeCount());
         assertEquals(Result.EMPTY, run(done -> service.purge(seller, done)).result());
+    }
+
+    @Test void staffChangePricesOfActiveListingsOnly() {
+        Listing listing = list("DIAMOND", 1_000);
+        assertEquals(Result.OK, run(done -> service.changePrice(listing.id(), 2_500, done)).result());
+        assertEquals(2_500, listing.price());
+        assertEquals(2_500L, store.prices.get(listing.id()));
+        assertTrue(platform.notices.contains(seller + " auction.price-changed-notice"));
+        assertEquals(Result.PRICE_TOO_LOW, run(done -> service.changePrice(listing.id(), 0, done)).result());
+        assertEquals(Result.NOT_FOUND, run(done -> service.changePrice("404", 10, done)).result());
+        store.failPrice = true;
+        assertEquals(Result.STORAGE_ERROR, run(done -> service.changePrice(listing.id(), 9_000, done)).result());
+        assertEquals(2_500, listing.price(), "a failed write keeps the old price");
+        store.failPrice = false;
+        assertEquals(Result.OK, run(done -> service.buy(listing.id(), buyer, "Buyer", false, done)).result());
+        assertEquals(97_500, bank.balance(buyer), "the buyer pays the new price");
+        assertEquals(Result.NOT_FOUND, run(done -> service.changePrice(listing.id(), 10, done)).result(), "a sold listing can no longer change");
     }
 
     @Test void expiredListingsGoToTheCollectionBox() {

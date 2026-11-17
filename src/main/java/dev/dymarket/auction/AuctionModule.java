@@ -66,6 +66,7 @@ public final class AuctionModule implements AuctionService.Platform {
         try {
             List<Listing> active = plugin.io().call(() -> {
                 store.prepare();
+                service.seedIds(store.maxListingId());
                 List<Listing> loaded = store.loadActive();
                 for (Listing listing : loaded) describe(listing);
                 return loaded;
@@ -377,6 +378,38 @@ public final class AuctionModule implements AuctionService.Platform {
     // ---- replies --------------------------------------------------------------------------------------------------
 
     /** Tells the sender why an auction action failed (anything but OK). Safe on any thread. */
+    /** Staff removal (command and GUI): the item goes to the seller's collection box and the seller is told. */
+    public void staffRemove(CommandSender sender, String id, Runnable after) {
+        service.remove(id, outcome -> {
+            if (outcome.ok()) Commands.reply(plugin, sender, "auction.removed", Commands.values("{id}", outcome.listing().id(),
+                    "{item}", AuctionService.label(outcome.listing()), "{player}", outcome.listing().sellerName()));
+            else failure(sender, outcome, Commands.values("{id}", id));
+            if (after != null) after.run();
+        });
+    }
+
+    /** Staff price change (command and GUI); {@code text} is read in the listing's currency, like /ah sell. */
+    public void staffPrice(CommandSender sender, String id, String text, Runnable after) {
+        Listing listing = service.get(id);
+        if (listing == null) {
+            Commands.problem(plugin, sender, "auction.not-found", Commands.values("{id}", id), "auction.admin-price-usage");
+            return;
+        }
+        Currency currency = plugin.currencies().get(listing.currency());
+        java.util.OptionalLong price = currency == null ? java.util.OptionalLong.empty() : CurrencyFormat.parse(currency, text);
+        if (price.isEmpty() || price.getAsLong() <= 0) {
+            Commands.problem(plugin, sender, "general.invalid-amount", Commands.values("{amount}", text), "auction.admin-price-usage");
+            return;
+        }
+        service.changePrice(id, price.getAsLong(), outcome -> {
+            if (outcome.ok()) Commands.reply(plugin, sender, "auction.price-changed", Commands.values("{id}", listing.id(),
+                    "{item}", AuctionService.label(listing), "{player}", listing.sellerName(),
+                    "{price}", CurrencyFormat.format(currency, listing.price())));
+            else failure(sender, outcome, Commands.values("{id}", id));
+            if (after != null) after.run();
+        });
+    }
+
     public void failure(CommandSender sender, AuctionService.Outcome outcome, Map<String, String> extra) {
         Map<String, String> values = new HashMap<>(extra);
         Listing listing = outcome.listing();

@@ -6,7 +6,18 @@
 
 DyMarket is one light economy plugin for survival, SMP, Towny/Earth and Skyblock servers. It keeps balances in several currencies, delivers web-store credits safely, runs an auction house and lets players sell or rent their DyClaim land, with one SQLite file, no database server and one JAR for every server build.
 
-DyMarket combines a multi-currency economy with a Vault provider, a transaction log with rollback, an idempotent credits bridge for webstores and RCON, a buy-it-now auction house with a chest GUI and a full command path, and estate sale and rent on top of DyClaim. **Version 1.0.0-BETA** is the first public release; BETA means the economy data format may still change before 1.0.0, and DyMarket backs up its data file automatically on every start.
+DyMarket combines a multi-currency economy with a Vault provider, a transaction log with rollback, an idempotent credits bridge for webstores and RCON, a buy-it-now auction house with a chest GUI and a full command path, and estate sale and rent on top of DyClaim. **Version 1.1.0-BETA** brings the same commands, help pages and look as the rest of the Dy family, an auction house that works the way players expect, with tools for staff, and adjustable cooldowns. BETA means details may still change before the first stable release; DyMarket backs up its data file automatically on every start.
+
+---
+
+## New in 1.1.0-BETA
+
+- **Feels like the rest of the family.** The same `[DyMarket]` prefix style as DyClaim, help in short pages (`/market help 2`) and every staff command under `/dymarket admin`, with `/dyma` as its shortcut. `/market` and `/dym` open the same menu as `/dymarket`, and `/economy` (`/eco`) holds only the money commands for staff.
+- **Mistakes explain themselves.** A wrong amount, currency or word now shows the problem and then the right way to type the command. TAB suggests amounts where an amount goes and currencies only after it, and `/dyma give <player> credits 100` works as well as `/dyma give <player> 100 credits`.
+- **A classic auction house.** Click **Search** and type what you want in chat. The bottom bar holds sort, search, a short guide, your items for sale and your collection box. Window titles carry no colour code, so they stay readable with dark resource packs too. Staff can remove a listing or change its price straight from the window.
+- **Short numbers.** New listings, leases and transactions get plain numbers (`#12`) instead of random codes.
+- **Cooldowns.** Seconds to wait between payments, credit transfers, exchanges, auction sales and purchases and estate listings and purchases, each set under `cooldowns`. `dymarket.bypass.cooldown` skips them.
+- **`/dyma reset <player> [currency]`** puts a balance back to its starting amount.
 
 ---
 
@@ -14,7 +25,7 @@ DyMarket combines a multi-currency economy with a Vault provider, a transaction 
 
 **Several currencies, one plugin.** `money` and `credits` come ready, and more can be added in `config.yml`. Each currency has its own name, symbol, decimals, number format, starting balance, maximum balance and transfer switch. One currency is served to other plugins through Vault, so DyHomes, DyRTP and any Vault plugin charge their prices in it.
 
-**Money that cannot go missing.** No operation can create a negative balance or go over `max-balance`; such an operation fails as a whole. Transfers between two players lock both accounts, and every change is written to an append-only transaction log that `/dymarket log` shows and `/dymarket rollback` reverses.
+**Money that cannot go missing.** No operation can create a negative balance or go over `max-balance`; such an operation fails as a whole. Transfers between two players lock both accounts, and every change is written to an append-only transaction log that `/dyma log` shows and `/dyma rollback` reverses.
 
 **Credits from your webstore.** Tebex, RCON scripts and web panels deliver credits with one console command that carries the store's transaction ID. The same ID is never paid twice: a repeat returns "already applied", changes nothing and exits without error, so scripts do not retry. Players send credits to each other, exchange them for money and can get a top-up bonus.
 
@@ -22,9 +33,9 @@ DyMarket combines a multi-currency economy with a Vault provider, a transaction 
 
 **Land that earns rent.** With DyClaim 1.3.1 or later, `/estate` sells or rents the connected claims you stand in. A sale transfers every claim to the buyer; rent gives the tenant timed DyClaim trust, renews automatically (on by default) and ends after a grace period when the rent is not paid.
 
-**Safe against abuse.** Rate limits on `/pay`, `/credits send` and auction purchases, confirmations for large payments and purchases, and an alert to staff for transfers at or above `security.alert.transfer-above`.
+**Safe against abuse.** Adjustable cooldowns and rate limits on payments, credit transfers and auction and estate trades, confirmations for large payments and purchases, and an alert to staff for transfers at or above `security.alert.transfer-above`.
 
-**Easy switch.** `/dymarket import essentials` copies EssentialsX balances, and `/dymarket import vault` copies balances from the economy currently registered in Vault. Nothing that is already non-zero in DyMarket is overwritten.
+**Easy switch.** `/dyma import essentials` copies EssentialsX balances, and `/dyma import vault` copies balances from the economy currently registered in Vault. Nothing that is already non-zero in DyMarket is overwritten.
 
 **One JAR for every server.** Bukkit, Spigot, Paper, Purpur and Folia. On Folia, items are taken and delivered on each player's own thread, and all disk work runs on one background thread, never on the main or a region thread.
 
@@ -38,11 +49,11 @@ Planned for later releases: Bedrock forms, bidding auctions and buy orders, MySQ
 
 | Server | JAR |
 | --- | --- |
-| Bukkit, Spigot, Paper, Purpur, Folia | `DyMarket-1.0.0-BETA.jar` |
+| Bukkit, Spigot, Paper, Purpur, Folia | `DyMarket-1.1.0-BETA.jar` |
 
 Java 17 bytecode; use the Java runtime your server needs. Release listing: Minecraft 1.20.x through 26.x. Optional: Vault (to serve or use a Vault economy), DyClaim 1.3.1 or later (estate), PlaceholderAPI and DyDiscord (detected; it has no staff-alert API yet). The SQLite driver comes with the server; DyMarket bundles no libraries.
 
-[Downloads](https://github.com/DyPlugin/DyMarket/releases/tag/1.0.0-BETA) · [Changelog](CHANGELOG.md)
+[Downloads](https://github.com/DyPlugin/DyMarket/releases/tag/1.1.0-BETA) · [Changelog](CHANGELOG.md)
 
 ## Commands
 
@@ -74,30 +85,37 @@ Java 17 bytecode; use the Java runtime your server needs. Release listing: Minec
 | `/estate leave [id] [confirm]` | End your lease now, without a refund |
 | `/estate evict [id]` | End your tenant's lease when the paid period ends |
 | `/estate mine` | Your listings and leases |
-| `/dymarket help` | Show the commands you may use |
+| `/dymarket help [page]` | Show the commands you may use, a page at a time |
 | `/dymarket language <auto/en/tr/de/es/ru>` | Save your language; from the console, set the server language |
-| `/dymarket give <player> <amount> [currency] [txid]` | Add to a balance; with a `txid`, at most once |
-| `/dymarket take <player> <amount> [currency]` | Take from a balance |
-| `/dymarket set <player> <amount> [currency]` | Set a balance |
-| `/dymarket log <player> [page]` | Show a player's transactions |
-| `/dymarket rollback <id> [force]` | Reverse a transaction |
-| `/dymarket merge <from> <to>` | Merge two accounts |
-| `/dymarket import <essentials/vault>` | Copy balances from EssentialsX or the current Vault economy |
-| `/dymarket ah remove <id>` | Remove any auction listing |
-| `/dymarket ah purge <player>` | Remove every auction listing of a player |
-| `/dymarket estate unlist <id>` | Take down any estate listing |
-| `/dymarket reload` | Validate and reload settings and messages |
+| `/dymarket admin [page]` | The staff help; `/dyma` is its shortcut |
+| `/dyma give <player> <amount> [currency] [txid]` | Add to a balance; with a `txid`, at most once |
+| `/dyma take <player> <amount> [currency]` | Take from a balance |
+| `/dyma set <player> <amount> [currency]` | Set a balance |
+| `/dyma reset <player> [currency]` | Put a balance back to the starting amount (every currency when none is named) |
+| `/dyma log <player> [page]` | Show a player's transactions |
+| `/dyma rollback <id> [force]` | Reverse a transaction |
+| `/dyma merge <from> <to>` | Merge two accounts |
+| `/dyma import <essentials/vault>` | Copy balances from EssentialsX or the current Vault economy |
+| `/dyma ah remove <id>` | Remove any auction listing |
+| `/dyma ah price <id> <price>` | Change the price of any auction listing |
+| `/dyma ah purge <player>` | Remove every auction listing of a player |
+| `/dyma estate unlist <id>` | Take down any estate listing |
+| `/dyma language <auto/en/tr/de/es/ru>` | Set the language for everyone |
+| `/dyma reload` | Validate and reload settings and messages |
+| `/economy <give/take/set/reset/log/rollback/merge/import> ...` | The same money commands without the rest of the admin menu, for staff with `dymarket.admin.economy`; `/eco` is its shortcut |
 
-`/bal` and `/money` also open `/balance`, `/balancetop` is `/baltop`, `/credit` is `/credits`, `/auction` and `/auctionhouse` are `/ah`, `/realestate` is `/estate`, and `/dym` and `/dyma` are short for `/dymarket`; `/dymarket` alone shows the help, and `/dymarket auction` is the same as `/dymarket ah`. Amounts accept `1k` and `2.5m`, and the currency's number format, such as `1,250.50` under `en-US` or `1.250,50` under `tr-TR`.
+`/bal` and `/money` also open `/balance`, `/balancetop` is `/baltop`, `/credit` is `/credits`, `/auction` and `/auctionhouse` are `/ah`, `/realestate` is `/estate`, and `/market` and `/dym` are the same as `/dymarket`. `/dymarket` alone shows the help, and `/dyma <command>` is the same as `/dymarket admin <command>`. Admin commands typed straight after `/dymarket` (such as `/dymarket give`, used by webstores) keep working. Amounts accept `1k` and `2.5m`, and the currency's number format, such as `1,250.50` under `en-US` or `1.250,50` under `tr-TR`.
 
 - `/pay` asks for `confirm` at or above `pay.confirm-above`, and `/ah buy` asks for it when `auction.confirm-purchase` is on. `/estate buy`, `/estate lease` and `/estate leave` always ask first. Each prints the exact command to repeat with `confirm`; in the GUIs a confirmation window does the same.
+- In the auction house, **Search** asks you to type the search in chat (`cancel` stops it); `/ah search` without text does the same.
 - `/estate sell` and `/estate rent` take `here` to list only the chunk you stand in. Without an `id`, `/estate unlist`, `info`, `buy` and `lease` use the listing you stand in; `autorenew`, `leave` and `evict` use the lease you stand in, or your only lease.
-- `/dymarket rollback` takes the transaction ID shown by `/dymarket log`. It refuses when the reversal would make a balance negative; `force` stops at zero instead.
+- `/dyma rollback` takes the transaction number shown by `/dyma log`. It refuses when the reversal would make a balance negative; `force` stops at zero instead.
 
 ## Permissions
 
 | Permission | Default | Purpose |
 |---|---|---|
+| `dymarket.player` | true | Every player permission below that defaults to true |
 | `dymarket.balance` | true | `/balance` |
 | `dymarket.balance.others` | op | Other players' balances |
 | `dymarket.pay` | true | `/pay` |
@@ -111,9 +129,9 @@ Java 17 bytecode; use the Java runtime your server needs. Release listing: Minec
 | `dymarket.estate` | true | Browse, buy and rent estate |
 | `dymarket.estate.sell` | true | `/estate sell` |
 | `dymarket.estate.rent` | true | `/estate rent` |
-| `dymarket.admin` | op | `/dymarket reload`, the server language from the console, and the administrator help lines |
-| `dymarket.admin.economy` | op | `give`, `take`, `set`, `log`, `rollback`, `merge`, `import` |
-| `dymarket.admin.ah` | op | Cancel or remove any listing, purge a player's listings |
+| `dymarket.admin` | op | `/dyma`, `/dyma reload` and `/dyma language` (the language for everyone) |
+| `dymarket.admin.economy` | op | `give`, `take`, `set`, `reset`, `log`, `rollback`, `merge`, `import` |
+| `dymarket.admin.ah` | op | Cancel, remove or reprice any listing (also with Shift-clicks in `/ah`), purge a player's listings |
 | `dymarket.admin.estate` | op | Take down any estate listing |
 | `dymarket.admin.alerts` | op | Suspicious-transfer alerts and update notices |
 | `dymarket.ah.limit.<n>` | not set | Active auction listings; the highest wins over `auction.max-listings` |
@@ -122,6 +140,7 @@ Java 17 bytecode; use the Java runtime your server needs. Release listing: Minec
 | `dymarket.estate.limit.unlimited` | op | No estate listing limit |
 | `dymarket.ah.tax.<percent>` | not set | Auction tax; the lowest wins over `auction.tax-percent` |
 | `dymarket.bypass.ratelimit` | op | Skip the rate limits on `/pay`, `/credits send` and auction purchases |
+| `dymarket.bypass.cooldown` | op | Skip every wait set under `cooldowns` |
 | `dymarket.bypass.tax` | false | No auction or estate tax on what this player lists |
 
 `baltop.exclude-permission` names the permission that hides players from `/baltop` (`dymarket.baltop.hidden` by default).
@@ -178,6 +197,19 @@ dymarket give {player} {amount} credits {transaction_id}
 
 The transaction ID makes the delivery idempotent: if the store sends the same purchase again, DyMarket answers that it was already applied and changes nothing. `credits.topup-bonus-percent` adds extra credits to each delivery with an ID, and `credits.announce-topups` announces them. `credits.exchange.rate` sets how much money one credit buys (1000 by default), `credits.exchange.min` the smallest exchange.
 
+**Cooldowns.** Seconds a player waits between two uses of an action, each set on its own; 0 means no wait and decimals work. A running wait is kept when the player leaves and rejoins, and `dymarket.bypass.cooldown` skips them all.
+
+```yaml
+cooldowns:
+  pay: 3
+  credits-send: 5
+  credits-exchange: 3
+  ah-sell: 3
+  ah-buy: 1
+  estate-list: 10
+  estate-buy: 5
+```
+
 **Payments and security.** `pay.min-amount`, and `pay.confirm-above` asks for a confirmation at or above an amount (0 never asks). `security.rate-limit.pay-per-minute` (10, shared by `/pay` and `/credits send`) and `security.rate-limit.ah-buy-per-minute` (20); 0 turns a limit off. Payments, Vault payments, auction sales and estate sales and rent at or above `security.alert.transfer-above` are shown in the console and to online players with `security.alert.notify-permission`. `security.alert.discord` is reserved for DyDiscord: DyDiscord has no staff-alert API yet, so DyMarket logs one line at start and the alerts stay in game and in the console.
 
 **Auction.** `auction.duration-hours` (48), `auction.tax-percent` (5.0; tax leaves the economy), `auction.min-price` and `auction.max-price`, `auction.max-listings` (7; 0 means no limit; `dymarket.ah.limit.<n>` overrides it), `auction.currency` and `auction.allowed-currencies`, `auction.confirm-purchase`, `auction.broadcast-sales`, an item `auction.blacklist`, `auction.block-items-with-lore-containing`, `auction.gui.rows` and `auction.gui.sort` (`newest`, `price-asc` or `price-desc`). The tax is fixed when the item is listed, from `auction.tax-percent` or the seller's lowest `dymarket.ah.tax.<n>`, so a later change does not touch running listings. The collection box keeps items with a reason: `EXPIRED`, `CANCELLED`, `REMOVED` (by staff), `FULL_INVENTORY` (the buyer's inventory was full) or `PURCHASE` (the buyer left before delivery).
@@ -220,7 +252,7 @@ A synchronous call or a Vault call for an offline player whose account is not in
 
 Everything is stored in one SQLite file, `plugins/DyMarket/data.db` (`storage.file`), with these tables: `accounts`, `transactions`, `auction_listings`, `collect_box`, `estate_listings`, `estate_leases`, `players` (names and language choices), `notices` (messages waiting for offline players) and `meta` (the schema version). On every start, before the file is opened, DyMarket copies it to `plugins/DyMarket/backups/data-<date>.db` and keeps the last seven copies. Balances are kept in memory and written in the background every `storage.flush-interval-ticks`; everything still waiting is written when the server stops. Disk work never runs on the main or a region thread. If the server has no SQLite driver, or the file cannot be opened, DyMarket says so in one console line and turns itself off.
 
-This is a BETA release: the economy data format may still change before 1.0.0. The current file is schema 1; columns added since the first build (the fixed tax of auction and estate listings and leases, the lease owner's name and the eviction flag) are added in place on start. Later versions convert the file automatically, and a file written by a newer DyMarket is refused rather than changed.
+The current file is schema 1; columns added since the first build (the fixed tax of auction and estate listings and leases, the lease owner's name and the eviction flag) are added in place on start. Later versions convert the file automatically, and a file written by a newer DyMarket is refused rather than changed.
 
 Missing settings and message keys are added on start and reload without touching your edits. DyMarket checks Modrinth every six hours for a newer release and tells players with `dymarket.admin.alerts`; `updates.check: false` turns this off. Anonymous [bStats](https://bstats.org/plugin/bukkit/DyMarket/35262) statistics can be turned off with `metrics.enabled: false`.
 
@@ -230,7 +262,7 @@ Missing settings and message keys are added on start and reload without touching
 gradle clean build
 ```
 
-Gradle 9.1 with Java 21 or 25. The JAR is `build/libs/DyMarket-1.0.0-BETA.jar`. The 92 tests use JUnit and Mockito and are not part of the JAR. The estate module compiles against `libs/DyClaim-1.3.1.jar`, built from the DyClaim project.
+Gradle 9.1 with Java 21 or 25. The JAR is `build/libs/DyMarket-1.1.0-BETA.jar`. The 99 tests use JUnit and Mockito and are not part of the JAR. The estate module compiles against `libs/DyClaim-1.3.1.jar`, built from the DyClaim project.
 
 ## License
 
@@ -238,10 +270,10 @@ DyMarket Source-Available License 1.0, the same terms as DyClaim, DyRTP, DyHomes
 
 ## Get started
 
-1. Put `DyMarket-1.0.0-BETA.jar` in `plugins/` (with Vault, and DyClaim 1.3.1 or later for estate) and start the server.
-2. Coming from EssentialsX or another Vault economy? Run `/dymarket import essentials` or `/dymarket import vault` once.
+1. Put `DyMarket-1.1.0-BETA.jar` in `plugins/` (with Vault, and DyClaim 1.3.1 or later for estate) and start the server.
+2. Coming from EssentialsX or another Vault economy? Run `/dyma import essentials` or `/dyma import vault` once.
 3. Point your webstore's delivery command at `dymarket give {player} {amount} credits {transaction_id}`.
-4. Adjust `config.yml` (currencies, auction tax, estate rent) and run `/dymarket reload`.
+4. Adjust `config.yml` (currencies, auction tax, estate rent) and run `/dyma reload`.
 
 ## Source and support
 

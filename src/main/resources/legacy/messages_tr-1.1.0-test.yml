@@ -1,0 +1,14 @@
+# Window titles of the unreleased 1.1.0 test build; unedited ones are upgraded.
+auction:
+  admin-usage: "{prefix} &cKullanım: &e/dyma ah sil <id> &7| &e/dyma ah temizle <oyuncu>"
+auction-gui:
+  title: "&8Müzayede &8({page}/{pages})"
+  title-search: "&8Arama: {text}"
+  title-confirm: "&8Bu eşyayı satın al?"
+  title-mine: "&8Satıştaki Eşyaların &8({page}/{pages})"
+  title-collect: "&8Toplama Kutusu &8({count})"
+estate-gui:
+  title: "&8Emlak Pazarı &8({page}/{pages})"
+  title-mine: "&8Emlakın &8({page}/{pages})"
+  title-confirm-buy: "&8Bu arazileri satın al?"
+  title-confirm-lease: "&8Bu arazileri kirala?"

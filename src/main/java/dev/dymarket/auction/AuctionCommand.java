@@ -66,7 +66,8 @@ public final class AuctionCommand implements CommandExecutor, TabCompleter {
             case "buy" -> buy(sender, label, args);
             case "search" -> search(sender, args);
             case "info" -> info(sender, args);
-            default -> plugin.messages().send(sender, "auction.usage");
+            case "help" -> plugin.messages().send(sender, "auction.usage");
+            default -> Commands.problem(plugin, sender, "general.unknown-subcommand", Commands.values("{word}", args[0]), "auction.usage");
         }
         return true;
     }
@@ -92,8 +93,8 @@ public final class AuctionCommand implements CommandExecutor, TabCompleter {
         if (args.length > next && !args[next].matches("\\d+")) {
             currency = plugin.currencies().get(args[next].toLowerCase(Locale.ROOT));
             if (currency == null) {
-                plugin.messages().send(sender, "general.unknown-currency", Commands.values("{currency}", args[next],
-                        "{currencies}", String.join(", ", settings.allowedCurrencies())));
+                Commands.problem(plugin, sender, "general.unknown-currency", Commands.values("{currency}", args[next],
+                        "{currencies}", String.join(", ", settings.allowedCurrencies())), "auction.sell-usage");
                 return;
             }
             next++;
@@ -105,9 +106,10 @@ public final class AuctionCommand implements CommandExecutor, TabCompleter {
         }
         OptionalLong price = CurrencyFormat.parse(currency, args[1]);
         if (price.isEmpty() || price.getAsLong() <= 0) {
-            plugin.messages().send(sender, "general.invalid-amount", Map.of("{amount}", args[1]));
+            Commands.problem(plugin, sender, "general.invalid-amount", Map.of("{amount}", args[1]), "auction.sell-usage");
             return;
         }
+        if (Commands.waiting(plugin, player, "ah-sell")) return;
         PlayerInventory inventory = player.getInventory();
         ItemStack hand = inventory.getItemInMainHand();
         boolean empty = hand == null || hand.getType() == Material.AIR || hand.getAmount() <= 0;
@@ -116,7 +118,7 @@ public final class AuctionCommand implements CommandExecutor, TabCompleter {
             try {
                 amount = Integer.parseInt(args[next]);
             } catch (NumberFormatException notNumber) {
-                plugin.messages().send(sender, "auction.sell-usage");
+                Commands.problem(plugin, sender, "general.invalid-amount", Map.of("{amount}", args[next]), "auction.sell-usage");
                 return;
             }
         }
@@ -142,6 +144,7 @@ public final class AuctionCommand implements CommandExecutor, TabCompleter {
             if (outcome.result() == AuctionService.Result.OK) {
                 Map<String, String> listed = service().values(outcome.listing(), used);
                 listed.put("{tax}", formatPercent(tax));
+                Commands.used(plugin, player, "ah-sell");
                 Commands.reply(plugin, sender, "auction.listed", listed);
             } else if (outcome.result() == AuctionService.Result.STORAGE_ERROR) {
                 Commands.reply(plugin, sender, "auction.list-failed");
@@ -231,7 +234,15 @@ public final class AuctionCommand implements CommandExecutor, TabCompleter {
 
     private void search(CommandSender sender, String[] args) {
         if (args.length < 2) {
-            plugin.messages().send(sender, "auction.search-usage");
+            if (!(sender instanceof Player player)) {
+                plugin.messages().send(sender, "auction.search-usage");
+                return;
+            }
+            plugin.messages().send(player, "auction.search-prompt");
+            plugin.prompts().ask(player, 60, text -> {
+                if (text.isEmpty() || CommandWords.is(text, "cancel")) plugin.messages().send(player, "auction.search-cancelled");
+                else AuctionGui.open(module, player, 0, module.defaultSort(), text);
+            });
             return;
         }
         String text = String.join(" ", Arrays.copyOfRange(args, 1, args.length));
@@ -329,6 +340,7 @@ public final class AuctionCommand implements CommandExecutor, TabCompleter {
         String sub = CommandWords.canonical(args[0]);
         switch (sub) {
             case "sell" -> {
+                if (args.length == 2) return Commands.amountHints(args[1]);
                 if (args.length == 3) return Commands.complete(args[2], service().settings().allowedCurrencies());
             }
             case "cancel" -> {

@@ -61,7 +61,7 @@ public class DyMarket extends JavaPlugin {
     /** Accounts kept in memory before idle offline ones are dropped. */
     public static final int CACHE_SIZE = 10_000;
     /** Releases whose stock message texts are bundled, so texts nobody edited follow the current wording. */
-    static final List<String> LEGACY_VERSIONS = List.of();
+    static final List<String> LEGACY_VERSIONS = List.of("1.0.0-BETA", "1.1.0-test");
 
     private static DyMarket instance;
 
@@ -73,6 +73,8 @@ public class DyMarket extends JavaPlugin {
     private CreditsService credits;
     private volatile CreditsService.Settings creditSettings;
     private final RateLimiter rateLimiter = new RateLimiter();
+    private final dev.dymarket.economy.Cooldowns cooldowns = new dev.dymarket.economy.Cooldowns();
+    private dev.dymarket.gui.ChatPrompt prompts;
     private MessageService messages;
     private BaltopService baltop;
     private DyDiscordHook discord;
@@ -120,6 +122,7 @@ public class DyMarket extends JavaPlugin {
                     getLogger().warning("Could not back up " + database.getName() + ": " + failure.getMessage());
                 }
                 store.open();
+                dev.dymarket.economy.Transaction.seed(store.maxTransactionId());
                 return null;
             });
         } catch (Exception failure) {
@@ -156,7 +159,7 @@ public class DyMarket extends JavaPlugin {
         Commands.register(this, new PayCommand(this), "pay");
         Commands.register(this, new BaltopCommand(this), "baltop");
         Commands.register(this, new CreditsCommand(this), "credits");
-        Commands.register(this, new DyMarketCommand(this), "dymarket");
+        Commands.register(this, new DyMarketCommand(this), "dymarket", "dyma", "economy");
         // The auction and estate modules replace these executors when they load.
         Commands.register(this, new ModuleStubCommand(this, "auction"), "ah");
         Commands.register(this, new ModuleStubCommand(this, "estate"), "estate");
@@ -165,6 +168,8 @@ public class DyMarket extends JavaPlugin {
         getServer().getPluginManager().registerEvents(playerListener, this);
         // DyMarket windows stay read-only even while a module is being switched off.
         getServer().getPluginManager().registerEvents(new GuiListener(), this);
+        prompts = new dev.dymarket.gui.ChatPrompt(scheduler);
+        getServer().getPluginManager().registerEvents(prompts, this);
         onMerge((from, to) -> {
             AuctionModule module = auction;
             if (module != null) module.merged(from, to);
@@ -430,6 +435,8 @@ public class DyMarket extends JavaPlugin {
     public EconomyService economy() { return economy; }
     public CreditsService credits() { return credits; }
     public RateLimiter rateLimiter() { return rateLimiter; }
+    public dev.dymarket.economy.Cooldowns cooldowns() { return cooldowns; }
+    public dev.dymarket.gui.ChatPrompt prompts() { return prompts; }
     public MessageService messages() { return messages; }
     public BaltopService baltop() { return baltop; }
     public AlertService alerts() { return alerts; }

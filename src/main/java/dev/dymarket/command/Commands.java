@@ -163,6 +163,57 @@ public final class Commands {
         reply(plugin, sender, key, values);
     }
 
+    /** Actions with a wait under {@code cooldowns} in config.yml. */
+    public static final List<String> COOLDOWNS = List.of("pay", "credits-send", "credits-exchange", "ah-sell", "ah-buy", "estate-list", "estate-buy");
+
+    /** Example amounts offered by TAB where an amount is typed. */
+    public static List<String> amountHints(String typed) {
+        return complete(typed, List.of("10", "100", "1000"));
+    }
+
+    /** Sends a problem and then how the command is used, so the player sees what to type instead. */
+    public static void problem(DyMarket plugin, CommandSender sender, String key, Map<String, String> values, String usageKey) {
+        plugin.messages().send(sender, key, values);
+        plugin.messages().send(sender, usageKey);
+    }
+
+    /**
+     * True (after telling the player how long) while the player still waits after the last use of {@code action}.
+     * The wait is set in seconds under {@code cooldowns.<action>}; {@code dymarket.bypass.cooldown} skips it.
+     */
+    public static boolean waiting(DyMarket plugin, Player player, String action) {
+        if (player.hasPermission("dymarket.bypass.cooldown")) return false;
+        long left = plugin.cooldowns().remaining(player.getUniqueId(), action, cooldownMillis(plugin, action));
+        if (left <= 0) return false;
+        plugin.messages().send(player, "general.cooldown", values("{time}", seconds(plugin, player, left)));
+        return true;
+    }
+
+    /** Starts the wait for {@code action}; call it after the action went through. */
+    public static void used(DyMarket plugin, Player player, String action) {
+        if (cooldownMillis(plugin, action) > 0) plugin.cooldowns().used(player.getUniqueId(), action);
+    }
+
+    static long cooldownMillis(DyMarket plugin, String action) {
+        return Math.max(0, Math.round(plugin.getConfig().getDouble("cooldowns." + action, 0) * 1000));
+    }
+
+    public static long longestCooldownMillis(DyMarket plugin) {
+        long longest = 0;
+        for (String action : COOLDOWNS) longest = Math.max(longest, cooldownMillis(plugin, action));
+        return longest;
+    }
+
+    /** "3 seconds", "1 minute 5 seconds" in the receiver's language. */
+    public static String seconds(DyMarket plugin, CommandSender sender, long millis) {
+        long total = Math.max(1, (millis + 999) / 1000);
+        long minutes = total / 60, rest = total % 60;
+        String secondsText = plugin.messages().get(sender, rest == 1 ? "value.second" : "value.seconds", values("{n}", String.valueOf(rest)));
+        if (minutes == 0) return secondsText;
+        String minutesText = plugin.messages().get(sender, minutes == 1 ? "value.minute" : "value.minutes", values("{n}", String.valueOf(minutes)));
+        return rest == 0 ? minutesText : minutesText + " " + secondsText;
+    }
+
     /** The currency named by the text, or null. */
     public static Currency currency(DyMarket plugin, String text) {
         return plugin.currencies().get(text);
